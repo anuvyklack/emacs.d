@@ -74,7 +74,7 @@
 (setq which-func-update-delay 1.0)
 (setq idle-update-delay which-func-update-delay)  ;; Obsolete in >= 30.1
 
-(defalias #'view-hello-file #'ignore)  ; Never show the hello file
+(keymap-unset help-map "h" :remove) ; view-hello-file
 
 ;; No beeping or blinking
 (setq visible-bell nil)
@@ -360,7 +360,9 @@
 (setq tab-always-indent 'complete)
 (setq tab-first-completion 'word-or-paren-or-punct)
 
-;; Perf: Reduce command completion overhead.
+;; Hide commands in `M-x' menu which do not work in the current mode.
+;; - Vertico commands are hidden in normal buffers.
+;; - Corfu commands are hidden, since they are not supposed to be used via `M-x'.
 (setq read-extended-command-predicate #'command-completion-default-include-p)
 
 ;; Enable multi-line commenting which ensures that `comment-indent-new-line'
@@ -531,8 +533,7 @@
 (setq dabbrev-upcase-means-case-search t)
 
 (setq dabbrev-ignored-buffer-modes
-      '(archive-mode image-mode docview-mode tags-table-mode
-                     pdf-view-mode tags-table-mode))
+      '(archive-mode image-mode doc-view-mode pdf-view-mode tags-table-mode))
 
 (setq dabbrev-ignored-buffer-regexps
       '(;; - Buffers starting with a space (internal or temporary buffers)
