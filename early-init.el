@@ -119,7 +119,6 @@ Note that this should end with a directory separator.")
      ((or (file-exists-p (expand-file-name "~/.emacs.el"))
           (file-exists-p (expand-file-name "~/.emacs")))
       (error "Emacs ignored loading 'init.el'. Please ensure that files such as ~/.emacs or ~/.emacs.el do not exist, as they may be preventing Emacs from loading the 'init.el' file"))
-
      (t
       (error "Configuration error. Debug by starting Emacs with: emacs --debug-init")))))
 (add-hook 'emacs-startup-hook #'minimal-emacs--check-success 102)
