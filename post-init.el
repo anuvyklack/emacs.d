@@ -372,7 +372,7 @@ ELEMENTS could be either a list or a single element."
 HOOK should be a symbol."
   (if (local-variable-p hook)
       (append (-> (buffer-local-value hook (current-buffer))
-                  (butlast)) ; Last element of local hook is always t.
+                  (butlast)) ;; Last element of local hook is always t.
               (default-value hook))
     ;; else
     (symbol-value hook)))
@@ -390,10 +390,11 @@ HOOK should be a symbol."
   ;; ;; Treat `-' char as part of the word on 'w', 'e', 'b', motions.
   ;; (modify-syntax-entry ?- "w" emacs-lisp-mode-syntax-table)
   ;; (modify-syntax-entry ?_ "w" emacs-lisp-mode-syntax-table)
-  (helix-keymap-set emacs-lisp-mode-map 'normal
-    "C-c k" '("Documentation" . helpful-at-point))
-  (helix-keymap-set lisp-data-mode-map 'normal
-    "C-c k" '("Documentation" . helpful-at-point)))
+  (dolist (keymap (list emacs-lisp-mode-map
+                        lisp-data-mode-map))
+    (helix-keymap-set keymap 'normal
+      "C-c k" '("Documentation" . helpful-at-point)
+      "M" '("Documentation" . helpful-at-point))))
 
 ;; ;; Extra faces definded by `lisp-extra-font-lock' package:
 ;; ;; - `lisp-extra-font-lock-backquote'
@@ -433,7 +434,14 @@ HOOK should be a symbol."
   paredit
   (helix-paredit :repo "~/code/emacs/helix-paredit")
   :after helix
-  :hook (emacs-lisp-mode-hook . helix-paredit-mode))
+  :hook (emacs-lisp-mode-hook . helix-paredit-mode)
+  :config
+  (helix-keymap-set helix-paredit-mode-map 'normal
+    "C-c w" 'paredit-wrap-round
+    "C-h" 'helix-paredit-backward
+    "C-j" 'helix-paredit-down-sexp
+    "C-k" 'helix-paredit-backward-up-sexp
+    "C-l" 'helix-paredit-forward))
 
 (leaf elisp-demos
   :elpaca t
@@ -529,13 +537,12 @@ Replacement for `lisp-outline-level'."
 (keymap-global-set "M-u" #'universal-argument)
 (keymap-set universal-argument-map "M-u" #'universal-argument-more)
 
-(leaf puni
-  :elpaca t
-  ;; :bind (("C-M-f" . puni-forward-sexp)
-  ;;        ("C-M-b" . puni-backward-sexp)
-  ;;        ("C-M-a" . puni-beginning-of-sexp)
-  ;;        ("C-M-e" . puni-end-of-sexp))
-  )
+;; (leaf puni
+;;   :elpaca t
+;;   :bind (("C-M-f" . puni-forward-sexp)
+;;          ("C-M-b" . puni-backward-sexp)
+;;          ("C-M-a" . puni-beginning-of-sexp)
+;;          ("C-M-e" . puni-end-of-sexp)))
 
 (leaf helix
   ;; :load-path "~/code/emacs/helix"
@@ -551,8 +558,9 @@ Replacement for `lisp-outline-level'."
   :config
   (helix-keymap-set nil 'normal
     "<backspace>" #'execute-extended-command
-    "M-;"   #'eval-expression ;; original #'exchange-point-and-mark
-    "C-o"   #'pop-to-mark-command
+    "g o"   #'exchange-point-and-mark
+    "C-M-;" #'eval-expression ;; default M-; but in Helix it reverse region
+    "M-o"   #'pop-to-mark-command
     "C-S-o" #'pop-global-mark
     "C-w n" #'other-window-prefix
     "g a"   #'describe-char
