@@ -363,7 +363,9 @@
 (setq tab-always-indent 'complete)
 (setq tab-first-completion 'word-or-paren-or-punct)
 
-;; Perf: Reduce command completion overhead.
+;; Hide commands in `M-x' menu which do not work in the current mode.
+;; - Vertico commands are hidden in normal buffers.
+;; - Corfu commands are hidden, since they are not supposed to be used via `M-x'.
 (setq read-extended-command-predicate #'command-completion-default-include-p)
 
 ;; Enable multi-line commenting which ensures that `comment-indent-new-line'

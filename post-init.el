@@ -88,13 +88,41 @@ ELEMENTS could be either a list or a single element."
 
 (defmacro my-custom-theme-set-faces (theme &rest specs)
   (declare (indent 1))
-  `(apply
-    #'custom-theme-set-faces ,theme
-    (mapcar (-lambda ((face . spec))
-              `(,face ((t ,spec))))
-            (list ,@specs))))
+  `(apply #'custom-theme-set-faces ,theme
+          (mapcar (-lambda ((face . spec))
+                    `(,face ((t ,spec))))
+                  (list ,@specs))))
 
 ;;; Appearance
+
+(add-hook 'prog-mode-hook #'blink-cursor-mode)
+
+(leaf display-line-numbers
+  :hook prog-mode-hook text-mode-hook conf-mode-hook
+  :custom
+  (display-line-numbers-type . t)
+  ;; (display-line-numbers-width-start . t)
+  ;; Explicitly define a width to reduce the cost of on-the-fly computation.
+  (display-line-numbers-width . 3)
+  ;; Show absolute line numbers for narrowed regions to make it easier to tell
+  ;; the buffer is narrowed, and where you are, exactly.
+  (display-line-numbers-widen . t)
+  ;; (display-line-numbers-grow-only . t)
+  )
+
+(add-hook 'prog-mode-hook
+          #'(lambda ()
+              (setq-local
+               ;; Highlight trailing whitespaces with `trailing-whitespace' face.
+               ;; Use `delete-trailing-whitespace' command.
+               show-trailing-whitespace t
+               ;; Display `fill-column' indicator.
+               ;; BUG in `display-fill-column-indicator-mode':
+               ;; Comparing 2 strings with `eq' instead of `equal' and get nil.
+               ;; So have to set this manually.
+               display-fill-column-indicator t
+               display-fill-column-indicator-character ?\u2502)))
+
 ;;;; Color theme
 
 (leaf ef-themes
@@ -124,8 +152,13 @@ ELEMENTS could be either a list or a single element."
   (user-mail-address . "anuvyklack@gmail.com")
   (confirm-kill-emacs . nil)
   (history-delete-duplicates . t)
-  ;; `M-=' (`describe-char') will show human readable output.
+  ;; `what-cursor-position' will show human readable output.
   (what-cursor-show-names . t)
+  ;; Don't show byte-compile warnings at start.
+  (byte-compile-warnings . nil)
+  ;; Show current key-sequence in minibuffer ala 'set showcmd' in vim.
+  ;; Any feedback after typing is better UX than no feedback at all.
+  (echo-keystrokes . 0.02)
   :hook
   ;; Automatically revert the buffer when its visited file changes on disk.
   ;; Auto Revert will not revert a buffer if it has unsaved changes, or if
@@ -139,43 +172,46 @@ ELEMENTS could be either a list or a single element."
 ;; Keep track of opened files.
 (leaf recentf
   :custom `(recentf-auto-cleanup . ,(if (daemonp) 300))
-  :hook   ((after-init-hook . (lambda()
-                                (let ((inhibit-message t))
-                                  (recentf-mode 1))))
-           (kill-emacs-hook . recentf-cleanup)))
+  :hook ((after-init-hook . (lambda()
+                              (let ((inhibit-message t))
+                                (recentf-mode 1))))
+         (kill-emacs-hook . recentf-cleanup)))
 
 (leaf helpful
   :elpaca t
-  :hook   (helpful-mode-hook . outline-minor-mode)
+  :hook (helpful-mode-hook . outline-minor-mode)
   :custom (help-window-select . t)
-  :init   (keymap-unset help-map "C-c" t) ;; 'describe-copying
-  :bind   (([remap describe-function] . helpful-callable)
-           ([remap describe-variable] . helpful-variable)
-           ([remap describe-command] . helpful-command)
-           ([remap describe-key] . helpful-key)
-           ([remap describe-symbol] . helpful-symbol)
-           (help-map ("F" . helpful-function)
-                     ("s" . helpful-symbol))))
-
-(leaf display-line-numbers
-  :hook prog-mode-hook text-mode-hook conf-mode-hook
-  :setq-default
-  ;; Explicitly define a width to reduce the cost of on-the-fly computation.
-  (display-line-numbers-width . 3)
-  ;; Show absolute line numbers for narrowed regions to make it easier to tell
-  ;; the buffer is narrowed, and where you are, exactly.
-  (display-line-numbers-widen . t))
+  :init (keymap-unset help-map "C-c" t) ;; 'describe-copying
+  :bind (([remap describe-function] . helpful-callable)
+         ([remap describe-variable] . helpful-variable)
+         ([remap describe-command] . helpful-command)
+         ([remap describe-key] . helpful-key)
+         ([remap describe-symbol] . helpful-symbol)
+         (help-map :package help
+          ("F" . describe-face)
+          ("M" . describe-keymap)
+          ("s" . helpful-symbol))
+         (embark-symbol-map :package embark
+          ("h" . helpful-symbol))))
 
 (leaf image-mode
-  :setq (image-animate-loop . t))
+  :custom (image-animate-loop . t))
 
 (leaf rainbow-delimiters
   :elpaca t
-  :hook
+  ;; :hook prog-mode-hook text-mode-hook conf-mode-hook
   ;; (prog-mode-hook . rainbow-delimiters-mode)
-  prog-mode-hook text-mode-hook conf-mode-hook)
+  :hook prog-mode-hook conf-mode-hook)
 
 ;;; Minibuffer & Completion
+
+(setopt read-file-name-completion-ignore-case t
+        read-buffer-completion-ignore-case t
+        completion-ignore-case t)
+
+;; Allow opening new minibuffers from inside existing minibuffers.
+(setopt enable-recursive-minibuffers t)
+(minibuffer-depth-indicate-mode +1)
 
 (leaf orderless
   :elpaca t
@@ -187,6 +223,11 @@ ELEMENTS could be either a list or a single element."
 (leaf vertico
   :elpaca t
   :global-minor-mode vertico-mode
+  :custom
+  (vertico-count . 15) ;; How many candidates to show
+  (vertico-scroll-margin . 2)
+  (vertico-cycle . nil)
+  (vertico-resize . 'grow-only) ;; Grow and shrink the Vertico minibuffer
   :bind (vertico-map
          ("C-j" . vertico-next)
          ("C-k" . vertico-previous)
@@ -199,22 +240,95 @@ ELEMENTS could be either a list or a single element."
   :commands (marginalia-mode marginalia-cycle)
   :global-minor-mode marginalia-mode)
 
+(leaf embark
+  :elpaca t
+  :commands (embark-act
+             embark-dwim
+             embark-export
+             embark-collect
+             embark-bindings
+             embark-prefix-help-command)
+  :setq (prefix-help-command . 'embark-prefix-help-command)
+  :config
+  ;; Hide the mode line of the Embark live/completions buffers
+  (add-to-list 'display-buffer-alist
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none))))
+  :bind (("C-." . embark-act)  ;; pick some comfortable binding
+         ("C-;" . embark-dwim) ;; good alternative: M-.
+         (help-map :package help
+          ("B" . embark-bindings)) ;; alternative for `describe-bindings'
+         ;; (embark-symbol-map
+         ;;  ("h" . helpful-symbol))
+         ))
+
+(leaf embark-consult
+  :elpaca t
+  :hook (embark-collect-mode . consult-preview-at-point-mode))
+
+(leaf corfu
+  :elpaca t
+  :global-minor-mode global-corfu-mode
+  :custom
+  (corfu-auto . t)
+  (corfu-auto-delay . 0.24)
+  (corfu-auto-prefix . 2)
+  (corfu-cycle . t)
+  (corfu-count . 16)
+  (corfu-max-width . 120)
+  (corfu-quit-at-boundary . 'separator) ;; M-SPC to continue completion.
+  (corfu-quit-no-match . 'separator)
+  ;; When the completion popup is visible, by default the current candidate is
+  ;; previewed into the buffer, and further input commits that candidate as
+  ;; previewed. The feature is in line with other common editors.
+  ;; - t :: non-inserting preview
+  (corfu-preview-current . 'insert)
+  (corfu-preselect . 'prompt)
+  (corfu-on-exact-match . nil) ;; Handling of exact matches
+  (global-corfu-minibuffer . t)
+  (tab-always-indent . 'complete)
+  (tab-first-completion . 'word)
+  ;; Disable Ispell completion function. As an alternative try `cape-dict'.
+  (text-mode-ispell-word-completion . nil))
+
+(leaf cape
+  :elpaca t
+  :commands (cape-dabbrev cape-file cape-elisp-block)
+  :bind ("C-c p" . cape-prefix-map)
+  :hook
+  ;; Add to the global default value of `completion-at-point-functions'
+  ;; which is used by `completion-at-point'.
+  (completion-at-point-functions . cape-dabbrev)
+  (completion-at-point-functions . cape-file)
+  (completion-at-point-functions . cape-elisp-block))
+
+;;; Search
+;;;; Consult
+
 (leaf consult
   :elpaca t
+  :hook
   ;; Enable automatic preview at point in the *Completions* buffer.
-  :hook (completion-list-mode . consult-preview-at-point-mode)
-  :custom
-  ;; Optionally configure the register formatting. This improves the register
+  (completion-list-mode . consult-preview-at-point-mode)
+  :setq
+  ;; Configure the register formatting. This improves the register.
   (register-preview-delay . 0.5)
-  (register-preview-function . #'consult-register-format)
-
-  ;; :advice
-  ;; ;; Optionally tweak the register preview window.
-  ;; (:override register-preview consult-register-window)
-
+  (register-preview-function . 'consult-register-format)
   :config
-  ;; Optionally tweak the register preview window.
-  (advice-add #'register-preview :override #'consult-register-window)
+  ;; Tweak the register preview window.
+  (advice-add 'register-preview :override #'consult-register-window)
+
+  ;; Aggressive asynchronous that yield instantaneous results. (suitable for
+  ;; high-performance systems.) Note: Minad, the author of Consult, does not
+  ;; recommend aggressive values.
+  ;; Read: https://github.com/minad/consult/discussions/951
+  ;;
+  ;; However, the author of minimal-emacs.d uses these parameters to achieve
+  ;; immediate feedback from Consult.
+  ;; (setq consult-async-input-debounce 0.02
+  ;;       consult-async-input-throttle 0.05
+  ;;       consult-async-refresh-delay 0.02)
 
   (consult-customize
    consult-theme :preview-key '(:debounce 0.2 any)
@@ -226,21 +340,21 @@ ELEMENTS could be either a list or a single element."
    :preview-key '(:debounce 0.4 any))
   (setq consult-narrow-key "<")
 
-  :bind (;; C-c bindings in `mode-specific-map'
-         ("C-c M-x" . consult-mode-command)
+  ;; C-c bindings are in `mode-specific-map'
+  :bind (("C-c M-x" . consult-mode-command)
          ("C-c h" . consult-history)
          ("C-c k" . consult-kmacro)
          ("C-c m" . consult-man)
          ("C-c i" . consult-info)
          ([remap Info-search] . consult-info)
-         ;; C-x bindings in `ctl-x-map'
+         ;; C-x bindings are in `ctl-x-map'
          ("C-x M-:" . consult-complex-command)
-         ("C-x b" . consult-buffer)
+         ("C-x b"   . consult-buffer)
          ("C-x 4 b" . consult-buffer-other-window)
          ("C-x 5 b" . consult-buffer-other-frame)
          ("C-x t b" . consult-buffer-other-tab)
-         ("C-x r b" . consult-bookmark)
-         ("C-x p b" . consult-project-buffer)
+         ;; ("C-x r b" . consult-bookmark)
+         ;; ("C-x p b" . consult-project-buffer)
          ;; Custom M-# bindings for fast register access
          ("M-#" . consult-register-load)
          ("M-'" . consult-register-store)
@@ -269,53 +383,15 @@ ELEMENTS could be either a list or a single element."
          ("M-s u" . consult-focus-lines)
          ;; Isearch integration
          ("M-s e" . consult-isearch-history)
-         (isearch-mode-map
-          ("M-e" . consult-isearch-history)
-          ("M-s e" . consult-isearch-history)
-          ("M-s l" . consult-line)
-          ("M-s L" . consult-line-multi))
+         (isearch-mode-map :package isearch
+                           ("M-e" . consult-isearch-history)
+                           ("M-s e" . consult-isearch-history)
+                           ("M-s l" . consult-line)
+                           ("M-s L" . consult-line-multi))
          ;; Minibuffer history
-         (minibuffer-local-map
-          ("M-s" . consult-history)
-          ("M-r" . consult-history))))
-
-(leaf corfu
-  :elpaca t
-  :global-minor-mode global-corfu-mode
-  :custom
-  (corfu-auto . t)
-  (corfu-auto-delay . 0.24)
-  (corfu-auto-prefix . 2)
-  (corfu-cycle . t)
-  (corfu-count . 16)
-  (corfu-max-width . 120)
-  (corfu-quit-at-boundary . 'separator) ;; M-SPC to continue completion.
-  (corfu-quit-no-match . 'separator)
-  ;; When the completion popup is visible, by default the current candidate is
-  ;; previewed into the buffer, and further input commits that candidate as
-  ;; previewed. The feature is in line with other common editors.
-  ;; - t :: non-inserting preview
-  (corfu-preview-current . 'insert)
-  (corfu-preselect . 'prompt)
-  (corfu-on-exact-match . nil) ;; Handling of exact matches
-  (global-corfu-minibuffer . t)
-  (tab-always-indent . 'complete)
-  (tab-first-completion . 'word)
-  ;; Hide commands in M-x which do not apply to the current mode.
-  (read-extended-command-predicate . #'command-completion-default-include-p)
-  ;; Disable Ispell completion function. As an alternative try `cape-dict'.
-  (text-mode-ispell-word-completion . nil))
-
-(leaf cape
-  :elpaca t
-  :commands (cape-dabbrev cape-file cape-elisp-block)
-  :bind ("C-c p" . cape-prefix-map)
-  :hook
-  ;; Add to the global default value of `completion-at-point-functions'
-  ;; which is used by `completion-at-point'.
-  (completion-at-point-functions . cape-dabbrev)
-  (completion-at-point-functions . cape-file)
-  (completion-at-point-functions . cape-elisp-block))
+         (minibuffer-local-map :package emacs
+                               ("M-s" . consult-history)
+                               ("M-r" . consult-history))))
 
 ;;; IDE
 ;;;; xref (goto definition)
