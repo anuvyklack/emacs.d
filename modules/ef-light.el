@@ -14,6 +14,9 @@
 
 ;;; General
 (my-custom-theme-set-faces 'ef-light
+  '(region
+    :background "#d6f4ff" ;; original #bfefff
+    :extend t)
   '(help-key-binding
     :foreground "DarkBlue" :background "grey96"
     :box (:line-width (-1 . -1) :color "grey80")
@@ -22,6 +25,14 @@
   '(line-number-current-line
     :background "#dddddd" :weight bold :inherit line-number)
   '(fringe :background "#f3f3f3"))
+
+;;; helix
+(my-custom-theme-set-faces 'ef-light
+  ;; '(helix-mode-line-cursors-indicator
+  ;;   :inherit mode-line-emphasis)
+  '(helix-mode-line-cursors-indicator
+    :weight bold
+    :inherit ef-themes-mark-other))
 
 ;;; org-mode
 ;;;; headings

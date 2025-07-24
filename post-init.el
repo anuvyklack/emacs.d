@@ -181,17 +181,19 @@ ELEMENTS could be either a list or a single element."
   :elpaca t
   :hook (helpful-mode-hook . outline-minor-mode)
   :custom (help-window-select . t)
-  :init (keymap-unset help-map "C-c" t) ;; 'describe-copying
   :bind (([remap describe-function] . helpful-callable)
          ([remap describe-variable] . helpful-variable)
          ([remap describe-command] . helpful-command)
          ([remap describe-key] . helpful-key)
          ([remap describe-symbol] . helpful-symbol)
-         (help-map :package help
+         (help-map
+          :package help
           ("F" . describe-face)
           ("M" . describe-keymap)
-          ("s" . helpful-symbol))
-         (embark-symbol-map :package embark
+          ("s" . helpful-symbol)
+          ("C-c" . nil)) ;; unbind `describe-copying'
+         (embark-symbol-map
+          :package embark
           ("h" . helpful-symbol))))
 
 (leaf image-mode
@@ -213,6 +215,7 @@ ELEMENTS could be either a list or a single element."
 (setopt enable-recursive-minibuffers t)
 (minibuffer-depth-indicate-mode +1)
 
+;;;; orderless
 (leaf orderless
   :elpaca t
   :custom
@@ -220,26 +223,63 @@ ELEMENTS could be either a list or a single element."
   (completion-category-defaults . nil)
   (completion-category-overrides . '((file (styles partial-completion)))))
 
+;;;; vertico
 (leaf vertico
   :elpaca t
+  :after helix
   :global-minor-mode vertico-mode
   :custom
   (vertico-count . 15) ;; How many candidates to show
   (vertico-scroll-margin . 2)
   (vertico-cycle . nil)
   (vertico-resize . 'grow-only) ;; Grow and shrink the Vertico minibuffer
+  :hook
+  (minibuffer-setup-hook . vertico-repeat-save)
   :bind (vertico-map
          ("C-j" . vertico-next)
          ("C-k" . vertico-previous)
          ;; ("<escape>" . meow-motion-mode)
          ;; ("<escape>" . meow-minibuffer-quit)
-         ))
+         )
+  :config
+  (helix-keymap-set vertico-map 'normal
+    ;; "M-<return>" 'vertico-exit-input ;; default setting
+    "<tab>"     'next-history-element
+    "<backtab>" 'previous-history-element
+    "C-p" 'consult-yank-from-kill-ring
+    "n" 'vertico-next-group
+    "N" 'vertico-previous-group
+    ;; "C-h" (lambda ()
+    ;;         (cond ((eq 'file (vertico--metadata-get 'category))
+    ;;                (call-interactively #'vertico-directory-up))))
+    "C-h" 'vertico-directory-up
+    "C-l" #'vertico-insert
+    ;; Russian
+    "C-о" 'vertico-next
+    "C-л" 'vertico-previous))
+
+(leaf vertico-directory
+  :after vertico
+  :hook
+  ;; Cleans up path when moving directories with shadowed paths syntax, e.g.
+  ;; cleans ~/foo/bar/// to /, and ~/foo/bar/~/ to ~/.
+  (rfn-eshadow-update-overlay-hook . vertico-directory-tidy)
+  :config
+  (helix-keymap-set vertico-map 'normal
+    "C-h" 'vertico-directory-up
+    ;; "C-h" (lambda ()
+    ;;         (cond ((eq 'file (vertico--metadata-get 'category))
+    ;;                (call-interactively #'vertico-directory-up))))
+    ))
 
 (leaf marginalia
   :elpaca t
   :commands (marginalia-mode marginalia-cycle)
-  :global-minor-mode marginalia-mode)
+  :global-minor-mode marginalia-mode
+  :bind (minibuffer-local-map
+         ("M-a" . marginalia-cycle)))
 
+;;;; embark
 (leaf embark
   :elpaca t
   :commands (embark-act
@@ -255,18 +295,25 @@ ELEMENTS could be either a list or a single element."
                '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
                  nil
                  (window-parameters (mode-line-format . none))))
-  :bind (("C-." . embark-act)  ;; pick some comfortable binding
-         ("C-;" . embark-dwim) ;; good alternative: M-.
-         (help-map :package help
+  :bind (("C-m" . embark-act)
+         ("M-m" . embark-dwim)
+         (help-map
+          :package help
           ("B" . embark-bindings)) ;; alternative for `describe-bindings'
-         ;; (embark-symbol-map
-         ;;  ("h" . helpful-symbol))
+         (embark-general-map
+          ("C-s" . nil) ;; embark-isearch-forward
+          ("C-r" . nil) ;; embark-isearch-backward
+          ("m" . mark)) ;; C-SPC
+         (embark-expression-map
+          ("j" . forward-list)   ;; n
+          ("k" . backward-list)) ;; p
          ))
 
 (leaf embark-consult
   :elpaca t
   :hook (embark-collect-mode . consult-preview-at-point-mode))
 
+;;;; corfu
 (leaf corfu
   :elpaca t
   :global-minor-mode global-corfu-mode
@@ -292,6 +339,7 @@ ELEMENTS could be either a list or a single element."
   ;; Disable Ispell completion function. As an alternative try `cape-dict'.
   (text-mode-ispell-word-completion . nil))
 
+;;;; cape
 (leaf cape
   :elpaca t
   :commands (cape-dabbrev cape-file cape-elisp-block)
@@ -604,6 +652,20 @@ Replacement for `lisp-outline-level'."
       (- (match-end 1) (match-beginning 1))
     0))
 
+;;; Commands
+
+(define-advice keyboard-quit (:around (orig-fun) quit-current-context)
+  "Quit the current context.
+When there is an active minibuffer and we are not inside it close it.
+When we are inside the minibuffer use `abort-recursive-edit' which
+quits any active region before exiting.  When there is no minibuffer
+`keyboard-quit' unless we are defining or executing a macro."
+  (if (active-minibuffer-window)
+      (abort-recursive-edit)
+    (unless (or defining-kbd-macro
+                executing-kbd-macro)
+      (call-interactively orig-fun))))
+
 ;;; Keybindings
 ;;;; General Keybindings
 
@@ -631,6 +693,9 @@ Replacement for `lisp-outline-level'."
   ;; Vertical motion starting at end of line keeps to ends of lines.
   (track-eol . t)
   (pixel-scroll-precision-interpolation-total-time . 0.3)
+  :bind
+  ;; ;; By default binded to `RET', but I rebind `C-m' which is also `RET'.
+  ;; ("<return>" . newline)
   :config
   (helix-keymap-set nil 'normal
     "<backspace>" #'execute-extended-command
