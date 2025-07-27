@@ -6,15 +6,15 @@
 
 (set-face-font 'default (font-spec :family "PragmataPro Mono Liga" :size 13.9))
 (set-face-font 'fixed-pitch (font-spec :family "PragmataPro Mono Liga" :size 13.9))
+(setopt use-default-font-for-symbols t)
 
 ;; (set-face-font 'default (font-spec :family "Inconsolata LGC" :size 17))
+;; (setopt use-default-font-for-symbols nil)
 
 ;; (set-face-attribute 'fixed-pitch nil
 ;;                     :font (font-spec :family "PragmataPro Mono Liga" :size 13.9))
 ;; (set-face-attribute 'fixed-pitch-serif nil
 ;;                     :family "Iosevka Term Curly Slab Medium")
-
-(setopt use-default-font-for-symbols nil)
 
 ;; Nerd Font
 (set-fontset-font t (cons ?\xf0001 ?\xf1af0) "Symbols Nerd Font Mono" nil 'prepend)

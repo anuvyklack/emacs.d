@@ -3,6 +3,7 @@
 ;;; Code:
 (require 'xdg)
 ;;-----------------------
+;; Start emacs from command line with `--debug-init' key, or uncomment:
 ;; (setq debug-on-error t
 ;;       debug-on-quit t)
 ;;-----------------------
@@ -101,14 +102,13 @@ ELEMENTS could be either a list or a single element."
   :hook prog-mode-hook text-mode-hook conf-mode-hook
   :custom
   (display-line-numbers-type . t)
-  ;; (display-line-numbers-width-start . t)
   ;; Explicitly define a width to reduce the cost of on-the-fly computation.
   (display-line-numbers-width . 3)
+  (display-line-numbers-width-start . t)
   ;; Show absolute line numbers for narrowed regions to make it easier to tell
   ;; the buffer is narrowed, and where you are, exactly.
   (display-line-numbers-widen . t)
-  ;; (display-line-numbers-grow-only . t)
-  )
+  (display-line-numbers-grow-only . t))
 
 (add-hook 'prog-mode-hook
           #'(lambda ()
@@ -507,13 +507,16 @@ HOOK should be a symbol."
 (leaf elisp-mode
   :after helix
   :hook
-  (emacs-lisp-mode-hook . outli-mode)
-  (emacs-lisp-mode-hook . helix-paredit-mode)
   (emacs-lisp-mode-hook
    . (lambda ()
        (setq-local tab-width 8
                    ;; outline-regexp "[ \t]*;;;\\(;*\\**\\) [^ \t\n]"
-                   )))
+                   )
+       ;; Order matters because `outline-minor-mode' and `helix-paredit-mode'
+       ;; both binds `C-j' and `C-k', and I want `helix-paredit-mode' bindings
+       ;; overlap `outline-minor-mode' bindings.
+       (outli-mode 1)
+       (helix-paredit-mode 1)))
   :config
   ;; ;; Treat `-' char as part of the word on 'w', 'e', 'b', motions.
   ;; (modify-syntax-entry ?- "w" emacs-lisp-mode-syntax-table)
@@ -568,7 +571,7 @@ HOOK should be a symbol."
   (helix-paredit :repo "~/code/emacs/helix-paredit")
   :after helix
   ;; :hook (emacs-lisp-mode-hook . helix-paredit-mode)
-  :config
+  :defer-config
   (helix-keymap-set helix-paredit-mode-map 'normal
     "C-c w" 'paredit-wrap-round
     "C-h" 'helix-paredit-backward
@@ -607,22 +610,13 @@ HOOK should be a symbol."
 (leaf outli
   :elpaca (outli :host github :repo "jdtsmith/outli")
   :after helix
-  ;; :after lispy ; uncomment only if you use lispy; it also sets speed keys on headers!
-  ;; :require t
   ;; :hook (emacs-lisp-mode-hook . outli-mode)
   :custom
   ;; Use <tab> and S-<tab> to cycle while point is on the button overlay.
   ;; (outline-minor-mode-use-buttons . t)
   :setq
   (outline-level . #'my-lisp-outline-level)
-  ;; :bind
-  ;; (outli-mode-map
-  ;;  ("C-j" . ))
-  :config
-  (define-key outli-mode-map (kbd "C-j")
-              `(menu-item "" outline-forward-same-level :filter outli--on-heading))
-  (define-key outli-mode-map (kbd "C-k")
-              `(menu-item "" outline-backward-same-level :filter outli--on-heading))
+  :defer-config
   (helix-keymap-set outline-overlay-button-map nil
     "<tab>" #'outline-cycle
     "<backtab>" #'outline-cycle-buffer)
@@ -691,13 +685,6 @@ quits any active region before exiting.  When there is no minibuffer
 (keymap-global-set "M-u" #'universal-argument)
 (keymap-set universal-argument-map "M-u" #'universal-argument-more)
 
-;; (leaf puni
-;;   :elpaca t
-;;   :bind (("C-M-f" . puni-forward-sexp)
-;;          ("C-M-b" . puni-backward-sexp)
-;;          ("C-M-a" . puni-beginning-of-sexp)
-;;          ("C-M-e" . puni-end-of-sexp)))
-
 (leaf helix
   ;; :load-path "~/code/emacs/helix"
   :elpaca
@@ -720,14 +707,7 @@ quits any active region before exiting.  When there is no minibuffer
     "M-o"   #'pop-to-mark-command
     "C-S-o" #'pop-global-mark
     "C-w n" #'other-window-prefix
-    "g a"   #'describe-char
-    ;; "g d"   #'xref-find-definitions ;; evil-goto-definition
-    ;; "g D"   #'xref-find-references  ;; declaration?
-    ;; "g r"   #'xref-find-references
-    ;; "C-w g d" #'xref-find-definitions-other-window
-    ;; "[ x"   #'xref-go-back
-    ;; "] x"   #'xref-go-forward
-    )
+    "g a"   #'describe-char)
   (helix-keymap-set global-map nil
     "C-x C-b" #'ibuffer       ;; list-buffers
     "C-x C-r" #'recentf-open) ;; find-file-read-only
