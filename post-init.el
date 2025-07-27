@@ -300,13 +300,13 @@ ELEMENTS could be either a list or a single element."
          (help-map
           :package help
           ("B" . embark-bindings)) ;; alternative for `describe-bindings'
-         (embark-general-map
-          ("C-s" . nil) ;; embark-isearch-forward
-          ("C-r" . nil) ;; embark-isearch-backward
-          ("m" . mark)) ;; C-SPC
-         (embark-expression-map
-          ("j" . forward-list)   ;; n
-          ("k" . backward-list)) ;; p
+         ;; (embark-general-map
+         ;;  ("C-s" . nil) ;; embark-isearch-forward
+         ;;  ("C-r" . nil) ;; embark-isearch-backward
+         ;;  ("m" . mark)) ;; C-SPC
+         ;; (embark-expression-map
+         ;;  ("j" . forward-list)   ;; n
+         ;;  ("k" . backward-list)) ;; p
          ))
 
 (leaf embark-consult
@@ -506,10 +506,14 @@ HOOK should be a symbol."
 
 (leaf elisp-mode
   :after helix
-  :hook (emacs-lisp-mode-hook
-         . (lambda ()
-             (setq-local tab-width 8
-                         outline-regexp "[ \t]*;;;\\(;*\\**\\) [^ \t\n]")))
+  :hook
+  (emacs-lisp-mode-hook . outli-mode)
+  (emacs-lisp-mode-hook . helix-paredit-mode)
+  (emacs-lisp-mode-hook
+   . (lambda ()
+       (setq-local tab-width 8
+                   ;; outline-regexp "[ \t]*;;;\\(;*\\**\\) [^ \t\n]"
+                   )))
   :config
   ;; ;; Treat `-' char as part of the word on 'w', 'e', 'b', motions.
   ;; (modify-syntax-entry ?- "w" emacs-lisp-mode-syntax-table)
@@ -535,6 +539,11 @@ HOOK should be a symbol."
   :hook ((help-mode-hook . highlight-defined-mode)
          (emacs-lisp-mode-hook . highlight-defined-mode)))
 
+;; ;; Highlight quoted symbols
+;; (leaf highlight-quoted
+;;   :elpaca t
+;;   :hook (emacs-lisp-mode-hook . highlight-quoted-mode))
+
 (leaf elisp-def
   :elpaca t
   :after helix
@@ -558,7 +567,7 @@ HOOK should be a symbol."
   paredit
   (helix-paredit :repo "~/code/emacs/helix-paredit")
   :after helix
-  :hook (emacs-lisp-mode-hook . helix-paredit-mode)
+  ;; :hook (emacs-lisp-mode-hook . helix-paredit-mode)
   :config
   (helix-keymap-set helix-paredit-mode-map 'normal
     "C-c w" 'paredit-wrap-round
@@ -600,13 +609,20 @@ HOOK should be a symbol."
   :after helix
   ;; :after lispy ; uncomment only if you use lispy; it also sets speed keys on headers!
   ;; :require t
-  :hook (emacs-lisp-mode-hook . outli-mode)
+  ;; :hook (emacs-lisp-mode-hook . outli-mode)
   :custom
   ;; Use <tab> and S-<tab> to cycle while point is on the button overlay.
   ;; (outline-minor-mode-use-buttons . t)
   :setq
   (outline-level . #'my-lisp-outline-level)
+  ;; :bind
+  ;; (outli-mode-map
+  ;;  ("C-j" . ))
   :config
+  (define-key outli-mode-map (kbd "C-j")
+              `(menu-item "" outline-forward-same-level :filter outli--on-heading))
+  (define-key outli-mode-map (kbd "C-k")
+              `(menu-item "" outline-backward-same-level :filter outli--on-heading))
   (helix-keymap-set outline-overlay-button-map nil
     "<tab>" #'outline-cycle
     "<backtab>" #'outline-cycle-buffer)
@@ -705,29 +721,29 @@ quits any active region before exiting.  When there is no minibuffer
     "C-S-o" #'pop-global-mark
     "C-w n" #'other-window-prefix
     "g a"   #'describe-char
-    "g d"   #'xref-find-definitions ;; evil-goto-definition
-    "g D"   #'xref-find-references  ;; declaration?
-    "g r"   #'xref-find-references
-    "C-w g d" #'xref-find-definitions-other-window
-    "[ x"   #'xref-go-back
-    "] x"   #'xref-go-forward)
-  (helix-keymap-set global-map nil
-    "C-x C-b" #'ibuffer      ; list-buffers
-    "C-x C-r" #'recentf-open ; find-file-read-only
-    ;; "C-c f x" #'xref-find-apropos
+    ;; "g d"   #'xref-find-definitions ;; evil-goto-definition
+    ;; "g D"   #'xref-find-references  ;; declaration?
+    ;; "g r"   #'xref-find-references
+    ;; "C-w g d" #'xref-find-definitions-other-window
+    ;; "[ x"   #'xref-go-back
+    ;; "] x"   #'xref-go-forward
     )
-  ;; `mode-specific-map' i.e. <leader> key
   (helix-keymap-set global-map nil
-    "C-c f f" #'find-file
-    "C-c f F" #'+default/find-file-under-here
-    "C-c f d" #'dired
-    "C-c f l" #'locate
-    "C-c f r" '("Recent files" . recentf-open)
-    "C-c f R" #'projectile-recentf
-    ;; "C-c f u" '("Sudo this file" . doom/sudo-this-file)
-    ;; "C-c f U" '("Sudo find file" . doom/sudo-find-file)
-    ;; "C-c f x" '("Open scratch buffer" . doom/open-scratch-buffer)
-    ;; "C-c f X" '("Switch to scratch buffer" . doom/switch-to-scratch-buffer)
+    "C-x C-b" #'ibuffer       ;; list-buffers
+    "C-x C-r" #'recentf-open) ;; find-file-read-only
+  ;; <leader> key
+  (helix-keymap-set mode-specific-map nil
+    ;; "f x" #'xref-find-apropos
+    "f f" #'find-file
+    "f F" #'+default/find-file-under-here
+    "f d" #'dired
+    "f l" #'locate
+    "f r" '("Recent files" . recentf-open)
+    "f R" #'projectile-recentf
+    ;; "f u" '("Sudo this file" . doom/sudo-this-file)
+    ;; "f U" '("Sudo find file" . doom/sudo-find-file)
+    ;; "f x" '("Open scratch buffer" . doom/open-scratch-buffer)
+    ;; "f X" '("Switch to scratch buffer" . doom/switch-to-scratch-buffer)
     ))
 
 ;; (leaf keypad
