@@ -21,6 +21,7 @@
 (leaf dash
   :elpaca (dash :wait t)
   :require t)
+(leaf hydra :elpaca t)
 
 ;; ;; Recursively add to `load-path' all folders in
 ;; ;; `$XDG_CONFIG_HOME/emacs/modules/' directory.
@@ -103,7 +104,7 @@ ELEMENTS could be either a list or a single element."
   :custom
   (display-line-numbers-type . t)
   ;; Explicitly define a width to reduce the cost of on-the-fly computation.
-  (display-line-numbers-width . 3)
+  ;; (display-line-numbers-width . 3)
   (display-line-numbers-width-start . t)
   ;; Show absolute line numbers for narrowed regions to make it easier to tell
   ;; the buffer is narrowed, and where you are, exactly.
@@ -196,6 +197,13 @@ ELEMENTS could be either a list or a single element."
           :package embark
           ("h" . helpful-symbol))))
 
+;; ;; `describe-repeat-maps'
+;; (leaf repeat
+;;   :global-minor-mode repeat-mode
+;;   :custom
+;;   (repeat-exit-key . "<escape>")
+;;   (repeat-check-key . nil))
+
 (leaf image-mode
   :custom (image-animate-loop . t))
 
@@ -278,40 +286,6 @@ ELEMENTS could be either a list or a single element."
   :global-minor-mode marginalia-mode
   :bind (minibuffer-local-map
          ("M-a" . marginalia-cycle)))
-
-;;;; embark
-(leaf embark
-  :elpaca t
-  :commands (embark-act
-             embark-dwim
-             embark-export
-             embark-collect
-             embark-bindings
-             embark-prefix-help-command)
-  :setq (prefix-help-command . 'embark-prefix-help-command)
-  :config
-  ;; Hide the mode line of the Embark live/completions buffers
-  (add-to-list 'display-buffer-alist
-               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-                 nil
-                 (window-parameters (mode-line-format . none))))
-  :bind (("C-m" . embark-act)
-         ("M-m" . embark-dwim)
-         (help-map
-          :package help
-          ("B" . embark-bindings)) ;; alternative for `describe-bindings'
-         ;; (embark-general-map
-         ;;  ("C-s" . nil) ;; embark-isearch-forward
-         ;;  ("C-r" . nil) ;; embark-isearch-backward
-         ;;  ("m" . mark)) ;; C-SPC
-         ;; (embark-expression-map
-         ;;  ("j" . forward-list)   ;; n
-         ;;  ("k" . backward-list)) ;; p
-         ))
-
-(leaf embark-consult
-  :elpaca t
-  :hook (embark-collect-mode . consult-preview-at-point-mode))
 
 ;;;; corfu
 (leaf corfu
@@ -408,7 +382,8 @@ ELEMENTS could be either a list or a single element."
          ("M-'" . consult-register-store)
          ("C-M-#" . consult-register)
          ;; Other custom bindings
-         ("M-y" . consult-yank-pop)
+         ;; ("M-y" . consult-yank-pop)
+         ([remap yank-pop] . consult-yank-pop)
          ;; M-g bindings in `goto-map'
          ("M-g e" . consult-compile-error)
          ("M-g f" . consult-flymake)
@@ -495,11 +470,144 @@ ELEMENTS could be either a list or a single element."
   "Return list with all local and global elements of the HOOK.
 HOOK should be a symbol."
   (if (local-variable-p hook)
-      (append (-> (buffer-local-value hook (current-buffer))
-                  (butlast)) ;; Last element of local hook is always t.
+      (append (-remove #'(lambda (elt) (eq elt 't))
+                       (buffer-local-value hook (current-buffer)))
               (default-value hook))
     ;; else
     (symbol-value hook)))
+
+;;; Extra facilities
+
+(leaf which-key
+  :global-minor-mode which-key-mode
+  :custom ((which-key-idle-delay . 1.5)
+           (which-key-idle-secondary-delay . 0.25)
+           (which-key-add-column-padding . 1)
+           (which-key-max-description-length . 40)))
+
+(leaf avy
+  :elpaca t
+  :init
+  (setopt avy-keys (number-sequence ?a ?z) ;; Any lower-case letter a-z.
+          avy-style 'at-full
+          avy-all-windows nil
+          avy-all-windows-alt t
+          avy-background t
+          ;; the unpredictability of this (when enabled) makes it a poor default
+          avy-single-candidate-jump t))
+
+;;;; embark
+(leaf embark
+  :elpaca t
+  :commands (embark-act
+             embark-dwim
+             embark-export
+             embark-collect
+             embark-bindings
+             embark-prefix-help-command)
+  :setq (prefix-help-command . 'embark-prefix-help-command)
+  :config
+  ;; Hide the mode line of the Embark live/completions buffers
+  (add-to-list 'display-buffer-alist
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none))))
+  :bind (("C-m" . embark-act)
+         ("M-m" . embark-dwim)
+         (help-map
+          :package help
+          ("B" . embark-bindings)) ;; alternative for `describe-bindings'
+         ;; (embark-general-map
+         ;;  ("C-s" . nil) ;; embark-isearch-forward
+         ;;  ("C-r" . nil) ;; embark-isearch-backward
+         ;;  ("m" . mark)) ;; C-SPC
+         ;; (embark-expression-map
+         ;;  ("j" . forward-list)   ;; n
+         ;;  ("k" . backward-list)) ;; p
+         ))
+
+(leaf embark-consult
+  :elpaca t
+  :hook (embark-collect-mode . consult-preview-at-point-mode))
+
+;;;; outline
+;; Wrapper around `outline'
+(leaf outli
+  :elpaca (outli :host github :repo "jdtsmith/outli")
+  :after helix
+  ;; :hook (emacs-lisp-mode-hook . outli-mode)
+  :custom
+  ;; Use <tab> and S-<tab> to cycle while point is on the button overlay.
+  ;; (outline-minor-mode-use-buttons . t)
+  :setq
+  (outline-level . #'my-lisp-outline-level)
+  :bind
+  (outline-overlay-button-map
+   ("<tab>" . outline-cycle)
+   ("<backtab>" . outline-cycle-buffer))
+  :defer-config
+  (helix-keymap-set outline-minor-mode-map 'normal
+    ;; outline-mark-subtree
+    "z <tab>" #'outline-cycle
+    "z <backtab>" #'outline-cycle-buffer
+    "z e" #'outline-show-entry
+    "z u" #'outline-up-heading
+    "z j" #'outline-next-visible-heading
+    "z k" #'outline-previous-visible-heading
+    "C-j" #'outline-forward-same-level
+    "C-k" #'outline-backward-same-level
+    "z c" #'outline-hide-entry
+    "z C" #'outline-hide-leaves
+    "z o" #'outline-show-entry
+    "z O" #'outline-show-subtree
+    "z m" #'outline-hide-sublevels
+    "z R" #'outline-show-all
+    ;; "z M" #'
+    "z S" '("Outline structure" . outline-hide-body)
+    "z p" '("Outline path" . outline-hide-other)
+    ;; "z >" #'outline-promote
+    ;; "z <" #'outline-demote
+    "z M-h" #'outline-promote
+    "z M-l" #'outline-demote
+    "z M-j" #'outline-move-subtree-down
+    "z M-k" #'outline-move-subtree-up
+    "z <return>" #'outline-insert-heading)
+  (defhydra hydra-outline (:hint nil)
+    "
+↓/↑: _C-j_, _C-k_  Move: _M-h_, _M-j_, _M-k_, _M-l_
+"
+    ("C-j" outline-forward-same-level)
+    ("C-k" outline-backward-same-level)
+    ("M-j" outline-move-subtree-down)
+    ("M-k" outline-move-subtree-up)
+    ("M-h" outline-promote)
+    ("M-l" outline-demote)
+    ;; Scrolling
+    ("C-b" helix-smooth-scroll-page-up)
+    ("C-f" helix-smooth-scroll-page-down)
+    ("C-d" helix-smooth-scroll-down)
+    ("C-u" helix-smooth-scroll-up)
+    ("C-e" helix-mix-scroll-line-down)
+    ("C-y" helix-mix-scroll-line-up)
+    ("z z" helix-smooth-scroll-line-not-to-very-top)
+    ("z t" helix-smooth-scroll-line-to-top)
+    ("z b" helix-smooth-scroll-line-to-bottom))
+  ;; (leaf 'foldout
+  ;;   :config
+  ;;   (helix-keymap-set outline-mode-map 'normal
+  ;;     "z n" #'foldout-zoom-subtree
+  ;;     "z w" #'foldout-exit-fold)
+  ;;   (helix-keymap-set outline-minor-mode-map 'normal
+  ;;     "z n" #'foldout-zoom-subtree
+  ;;     "z w" #'foldout-exit-fold))
+  )
+
+(defun my-lisp-outline-level ()
+  "Return outline level for comment at point.
+Replacement for `lisp-outline-level'."
+  (if (match-beginning 1)
+      (- (match-end 1) (match-beginning 1))
+    0))
 
 ;;; Major-modes
 ;;;; Emacs Lisp
@@ -521,11 +629,27 @@ HOOK should be a symbol."
   ;; ;; Treat `-' char as part of the word on 'w', 'e', 'b', motions.
   ;; (modify-syntax-entry ?- "w" emacs-lisp-mode-syntax-table)
   ;; (modify-syntax-entry ?_ "w" emacs-lisp-mode-syntax-table)
+
   (dolist (keymap (list emacs-lisp-mode-map
                         lisp-data-mode-map))
     (helix-keymap-set keymap 'normal
       "C-c k" '("Documentation" . helpful-at-point)
-      "M" '("Documentation" . helpful-at-point))))
+      "M" '("Documentation" . helpful-at-point)))
+  (helix-keymap-set emacs-lisp-mode-map 'normal
+    "z j" (lambda (count)
+            (interactive "p")
+            (outline-next-visible-heading count)
+            (hydra-outline/body))
+    "z k" (lambda (count)
+            (interactive "p")
+            (outline-previous-visible-heading count)
+            (hydra-outline/body))
+    "z C-j" 'hydra-outline/outline-forward-same-level
+    "z C-k" 'hydra-outline/outline-backward-same-level
+    "z M-j" 'hydra-outline/outline-move-subtree-down
+    "z M-k" 'hydra-outline/outline-move-subtree-up
+    "z M-h" 'hydra-outline/outline-promote
+    "z M-l" 'hydra-outline/outline-demote))
 
 ;; ;; Extra faces definded by `lisp-extra-font-lock' package:
 ;; ;; - `lisp-extra-font-lock-backquote'
@@ -585,83 +709,6 @@ HOOK should be a symbol."
   (advice-add 'describe-function-1 :after #'elisp-demos-advice-describe-function-1)
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
 
-;;; Extra facilities
-
-(leaf which-key
-  :global-minor-mode which-key-mode
-  :custom ((which-key-idle-delay . 1.5)
-           (which-key-idle-secondary-delay . 0.25)
-           (which-key-add-column-padding . 1)
-           (which-key-max-description-length . 40)))
-
-(leaf avy
-  :elpaca t
-  :init
-  (setopt avy-keys (number-sequence ?a ?z) ;; Any lower-case letter a-z.
-          avy-style 'at-full
-          avy-all-windows nil
-          avy-all-windows-alt t
-          avy-background t
-          ;; the unpredictability of this (when enabled) makes it a poor default
-          avy-single-candidate-jump t))
-
-;;;; outline
-;; Wrapper around `outline'
-(leaf outli
-  :elpaca (outli :host github :repo "jdtsmith/outli")
-  :after helix
-  ;; :hook (emacs-lisp-mode-hook . outli-mode)
-  :custom
-  ;; Use <tab> and S-<tab> to cycle while point is on the button overlay.
-  ;; (outline-minor-mode-use-buttons . t)
-  :setq
-  (outline-level . #'my-lisp-outline-level)
-  :defer-config
-  (helix-keymap-set outline-overlay-button-map nil
-    "<tab>" #'outline-cycle
-    "<backtab>" #'outline-cycle-buffer)
-  (helix-keymap-set outline-minor-mode-map 'normal
-    ;; outline-mark-subtree
-    "z <tab>" #'outline-cycle
-    "z <backtab>" #'outline-cycle-buffer
-    "z e" #'outline-show-entry
-    "z u" #'outline-up-heading
-    "C-j" #'outline-forward-same-level
-    "C-k" #'outline-backward-same-level
-    "z j" #'outline-next-visible-heading
-    "z k" #'outline-previous-visible-heading
-    "z c" #'outline-hide-entry
-    "z C" #'outline-hide-leaves
-    "z o" #'outline-show-entry
-    "z O" #'outline-show-subtree
-    "z m" #'outline-hide-sublevels
-    "z R" #'outline-show-all
-    ;; "z M" #'
-    "z S" '("Outline structure" . outline-hide-body)
-    "z p" '("Outline path" . outline-hide-other)
-    "z >" #'outline-promote
-    "z <" #'outline-demote
-    "M-h" #'outline-promote
-    "M-l" #'outline-demote
-    "M-j" #'outline-move-subtree-down
-    "M-k" #'outline-move-subtree-up)
-  ;; (leaf 'foldout
-  ;;   :config
-  ;;   (helix-keymap-set outline-mode-map 'normal
-  ;;     "z n" #'foldout-zoom-subtree
-  ;;     "z w" #'foldout-exit-fold)
-  ;;   (helix-keymap-set outline-minor-mode-map 'normal
-  ;;     "z n" #'foldout-zoom-subtree
-  ;;     "z w" #'foldout-exit-fold))
-  )
-
-(defun my-lisp-outline-level ()
-  "Return outline level for comment at point.
-Replacement for `lisp-outline-level'."
-  (if (match-beginning 1)
-      (- (match-end 1) (match-beginning 1))
-    0))
-
 ;;; Commands
 
 (define-advice keyboard-quit (:around (orig-fun) quit-current-context)
@@ -686,7 +733,6 @@ quits any active region before exiting.  When there is no minibuffer
 (keymap-set universal-argument-map "M-u" #'universal-argument-more)
 
 (leaf helix
-  ;; :load-path "~/code/emacs/helix"
   :elpaca
   pcre2el
   (helix :repo "~/code/emacs/helix")
