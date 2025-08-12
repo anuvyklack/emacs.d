@@ -531,12 +531,13 @@ HOOK should be a symbol."
   :hook (embark-collect-mode . consult-preview-at-point-mode))
 
 ;;;; outline
+
 ;; Wrapper around `outline'
 (leaf outli
   :elpaca (outli :host github :repo "jdtsmith/outli")
   :after helix
   ;; :hook (emacs-lisp-mode-hook . outli-mode)
-  :custom
+  ;; :custom
   ;; Use <tab> and S-<tab> to cycle while point is on the button overlay.
   ;; (outline-minor-mode-use-buttons . t)
   :setq
@@ -548,33 +549,42 @@ HOOK should be a symbol."
   :defer-config
   (helix-keymap-set outline-minor-mode-map 'normal
     ;; outline-mark-subtree
-    "z <tab>" #'outline-cycle
-    "z <backtab>" #'outline-cycle-buffer
-    "z e" #'outline-show-entry
-    "z u" #'outline-up-heading
-    "z j" #'outline-next-visible-heading
-    "z k" #'outline-previous-visible-heading
-    "C-j" #'outline-forward-same-level
-    "C-k" #'outline-backward-same-level
-    "z c" #'outline-hide-entry
-    "z C" #'outline-hide-leaves
-    "z o" #'outline-show-entry
-    "z O" #'outline-show-subtree
-    "z m" #'outline-hide-sublevels
-    "z R" #'outline-show-all
+    "z <tab>"     'outline-cycle
+    "z <backtab>" 'outline-cycle-buffer
+    "z e" 'outline-show-entry
+    "z u" 'outline-up-heading
+    "z j" (cons "Outline next visible heading"
+                (lambda (count)
+                  (interactive "p")
+                  (outline-next-visible-heading count)
+                  (hydra-outline/body)))
+    "z k" (cons "Outline previous visible heading"
+                (lambda (count)
+                  (interactive "p")
+                  (outline-previous-visible-heading count)
+                  (hydra-outline/body)))
+    "z C-j" '("Outline forward same level" . hydra-outline/outline-forward-same-level)
+    "z C-k" '("Outline backward same level" . hydra-outline/outline-backward-same-level)
+    "z c" 'outline-hide-entry
+    "z C" 'outline-hide-leaves
+    "z o" 'outline-show-entry
+    "z O" 'outline-show-subtree
+    "z m" 'outline-hide-sublevels
+    "z R" 'outline-show-all
     ;; "z M" #'
     "z S" '("Outline structure" . outline-hide-body)
     "z p" '("Outline path" . outline-hide-other)
-    ;; "z >" #'outline-promote
-    ;; "z <" #'outline-demote
-    "z M-h" #'outline-promote
-    "z M-l" #'outline-demote
-    "z M-j" #'outline-move-subtree-down
-    "z M-k" #'outline-move-subtree-up
-    "z <return>" #'outline-insert-heading)
+    ;; "z >" 'outline-promote
+    ;; "z <" 'outline-demote
+    "z <return>" 'outline-insert-heading
+    "z M-j" '("Outline move subtree down" . hydra-outline/outline-move-subtree-down)
+    "z M-k" '("Outline move subtree up" . hydra-outline/outline-move-subtree-up)
+    "z M-h" '("Outline promote" . hydra-outline/outline-promote)
+    "z M-l" '("Outline demote" . hydra-outline/outline-demote))
+
   (defhydra hydra-outline (:hint nil)
     "
-↓/↑: _C-j_, _C-k_  Move: _M-h_, _M-j_, _M-k_, _M-l_
+Jump: _C-j_, _C-k_  Move: _M-h_, _M-j_, _M-k_, _M-l_
 "
     ("C-j" outline-forward-same-level)
     ("C-k" outline-backward-same-level)
@@ -592,6 +602,7 @@ HOOK should be a symbol."
     ("z z" helix-smooth-scroll-line-not-to-very-top)
     ("z t" helix-smooth-scroll-line-to-top)
     ("z b" helix-smooth-scroll-line-to-bottom))
+
   ;; (leaf 'foldout
   ;;   :config
   ;;   (helix-keymap-set outline-mode-map 'normal
@@ -634,22 +645,7 @@ Replacement for `lisp-outline-level'."
                         lisp-data-mode-map))
     (helix-keymap-set keymap 'normal
       "C-c k" '("Documentation" . helpful-at-point)
-      "M" '("Documentation" . helpful-at-point)))
-  (helix-keymap-set emacs-lisp-mode-map 'normal
-    "z j" (lambda (count)
-            (interactive "p")
-            (outline-next-visible-heading count)
-            (hydra-outline/body))
-    "z k" (lambda (count)
-            (interactive "p")
-            (outline-previous-visible-heading count)
-            (hydra-outline/body))
-    "z C-j" 'hydra-outline/outline-forward-same-level
-    "z C-k" 'hydra-outline/outline-backward-same-level
-    "z M-j" 'hydra-outline/outline-move-subtree-down
-    "z M-k" 'hydra-outline/outline-move-subtree-up
-    "z M-h" 'hydra-outline/outline-promote
-    "z M-l" 'hydra-outline/outline-demote))
+      "M" '("Documentation" . helpful-at-point))))
 
 ;; ;; Extra faces definded by `lisp-extra-font-lock' package:
 ;; ;; - `lisp-extra-font-lock-backquote'
