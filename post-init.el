@@ -143,6 +143,20 @@ ELEMENTS could be either a list or a single element."
   (load-file (file-name-concat (xdg-config-home) "emacs/modules/ef-light.el"))
   (enable-theme 'ef-light))
 
+;;;; Colorize strings that represent colors
+
+(leaf rainbow-mode
+  :elpaca t
+  :hook (emacs-lisp-mode-hook
+         conf-space-mode-hook
+         conf-toml-mode-hook
+         fish-mode-hook
+         toml-ts-mode-hook))
+
+;;;; prettify-symbols-mode
+
+(setopt prettify-symbols-unprettify-at-point t)
+
 ;;; Core settings
 
 (leaf emacs
@@ -212,6 +226,77 @@ ELEMENTS could be either a list or a single element."
   ;; :hook prog-mode-hook text-mode-hook conf-mode-hook
   ;; (prog-mode-hook . rainbow-delimiters-mode)
   :hook prog-mode-hook conf-mode-hook)
+
+;;; Windows
+;;;; tab-bar
+
+;; Each tab represents a window configuration (like in Vim).
+(leaf tab-bar
+  :after helix
+  :global-minor-mode
+  tab-bar-mode
+  ;; Like `winner-mode' but for `tab-bar-mode'.
+  tab-bar-history-mode
+  :custom
+  ;; Replacing `tab-bar-format-tabs' with `tab-bar-format-tabs-groups' will
+  ;; group tabs on the tab bar.
+  ;;
+  ;; Possible values:
+  ;; - tab-bar-format-menu-bar
+  ;; - tab-bar-format-tabs
+  ;; - tab-bar-format-tabs-groups
+  ;; - tab-bar-separator
+  ;; - tab-bar-format-add-tab
+  ;; - tab-bar-format-align-right
+  ;; - tab-bar-format-global
+  ;;
+  ;; https://git.savannah.gnu.org/cgit/emacs.git/commit/etc/NEWS?id=f9b737fb9d21ac7adff403274167e76e77d033b8
+  (tab-bar-format . '(tab-bar-format-history
+                      tab-bar-format-tabs-groups
+                      tab-bar-separator
+                      tab-bar-format-add-tab))
+  ;; (tab-bar-new-tab-choice . "*dashboard*") ;; Buffer to show in new tab.
+  (tab-bar-tab-hints . nil) ;; Show tab numbers.
+  (tab-bar-close-button-show . nil)
+  ;; - 1 :: Hide tab bar if only 1 tabs open.
+  ;; - t :: Always show tab bar.
+  (tab-bar-show . t)
+  (tab-bar-history-limit . 20)
+  :config
+  (global-set-key [remap winner-undo] #'tab-bar-history-back)
+  (global-set-key [remap winner-redo] #'tab-bar-history-forward)
+  (dolist (state '(normal motion))
+    ;; tab-bar-mode-map
+    (helix-keymap-set nil state
+      "C-<tab>"     #'tab-next
+      "C-<backtab>" #'tab-previous
+      "] t" #'tab-next
+      "[ t" #'tab-previous))
+  (helix-keymap-set helix-window-map nil
+    "<tab>"     '("New tab" . my-tab-new)
+    "<backtab>" '("Duplicate tab" . tab-duplicate)
+    "C-<tab>"   #'other-tab-prefix
+    "u" '("Winner undo" . tab-bar-history-back)
+    "U" '("Winner redo" . tab-bar-history-forward)
+    "t" (cons "tab-bar" (define-keymap
+                          "t" #'my-tab-new
+                          "T" #'tab-duplicate
+                          "c" #'tab-close
+                          "C" #'tab-close-other ;; Close all other tabs.
+                          "g" #'tab-group       ;; Add current tab to group.
+                          ">" #'tab-bar-move-tab
+                          "<" #'tab-bar-move-tab-backward
+                          "F" #'tab-detach
+                          "n" #'other-tab-prefix
+                          ;; "-" #'dired-other-tab
+                          "r" #'tab-rename
+                          "u" #'tab-undo)))) ;; Restore last closed tab.
+
+(defun my-tab-new (arg)
+  "Create new tab.
+With universal argument move current window into new tab."
+  (interactive "P")
+  (if arg (tab-window-detach) (tab-new)))
 
 ;;; Minibuffer & Completion
 
@@ -476,6 +561,290 @@ HOOK should be a symbol."
     ;; else
     (symbol-value hook)))
 
+;;; Org-mode
+;;;; Config
+;;;;; General settings
+(setopt
+ ;; The `org-directory' variable must be set before Org loads!
+ org-directory (expand-file-name "~/notes/")
+
+ org-modules '(;; ol-doi
+               ;; ol-w3m
+               ;; ol-bbdb
+               ol-bibtex
+               ol-docview
+               ;; ol-gnus
+               ol-info
+               ;; ol-irc
+               ;; ol-mhe
+               ;; ol-rmail
+               ;; ol-eww
+               )
+
+ org-return-follows-link t
+ ;; org-fold-core-style 'overlays
+ org-tags-column -80 ; Прижимать тэги к 80 колонке справа.
+
+ ;; org-M-RET-may-split-line '((default . t))
+ org-insert-heading-respect-content nil
+ org-default-notes-file (file-name-concat org-directory "inbox.org")
+
+ ;; Indentation for the content of a source code block.
+ org-edit-src-content-indentation 0
+ org-src-preserve-indentation nil
+
+ ;; Use `TAB' language's major-mode binding in code blocks.
+ org-src-tab-acts-natively nil
+
+ ;; ;; Follow org links by press Enter with point on it.
+ ;; org-return-follows-link t
+
+ ;; ;; Changes to task states might get logged, especially for recurring
+ ;; ;; routines. If so, log them in a drawer, not the content of the note.
+ ;; org-log-state-notes-into-drawer t
+
+ org-indirect-buffer-display 'current-window
+ org-list-allow-alphabetical t
+ ;; org-log-into-drawer t
+
+ org-startup-folded 'show2levels ; Initial visibility
+
+ ;; Properties apply also for sublevels.
+ org-use-property-inheritance t
+
+ ;; org-log-done 'time ; Track time when tasks were finished.
+ org-deadline-warning-days 14
+ org-log-redeadline 'note
+ org-log-reschedule nil
+ org-blank-before-new-entry '((heading . t)
+                              (plain-list-item . auto)))
+
+;;;;; appearence
+
+(setq org-startup-indented t
+      org-fontify-whole-heading-line t
+      org-fontify-quote-and-verse-blocks t
+      org-pretty-entities t)
+
+;; Enclose text in "{}" after "_" to make it treated as subscript.
+(setq org-use-sub-superscripts '{})
+
+;;;;; org-id
+
+(setq org-id-method 'ts
+      org-id-ts-format "%Y%m%dT%H%M%S")
+
+;; How to store link on org-mode outline node:
+(setq org-id-link-to-org-use-id 'create-if-interactive)
+;; (setq org-id-link-to-org-use-id 'use-existing)
+
+;;;;; org-attach
+
+(setopt
+ org-attach-store-link-p 'attached
+ org-attach-dir-relative t
+ org-attach-id-dir (file-name-concat org-directory "org-attach/")
+ org-attach-method 'mv ; move
+ ;; org-attach-use-inheritance nil
+ org-attach-auto-tag "ATTACH"
+ org-attach-preferred-new-method 'id
+ org-attach-sync-delete-empty-dir 'query
+ org-file-apps '((system . "xdg-open %s")
+                 ("\\.pdf\\'" . system)
+                 ("\\.djvu?\\'" . system)
+                 (directory . system)
+                 (auto-mode . emacs)
+                 ("\\.x?html?\\'" . default))
+ org-attach-id-to-path-function-list '(identity
+                                       org-attach-id-uuid-folder-format
+                                       org-attach-id-ts-folder-format
+                                       org-attach-id-fallback-folder-format))
+
+;; (defun my-org-attach-id-ts-folder-format (id)
+;;   "Translate an UUID ID into a folder-path.
+;; Default format for how Org translates ID properties to a path for
+;; attachments.  Useful if ID is generated with UUID."
+;;   (and (< 4 (length id))
+;;        (format "%s/%s"
+;;                (substring id 0 4)
+;;                id
+;;                ;; (substring id 4)
+;;                )))
+
+;;;;; Capture templates
+
+(setq org-capture-templates
+      '(("j" "journal" plain
+         (file+olp+datetree +org-capture-journal-file)
+         "%?"
+         :empty-lines-before 1
+         ;; :kill-buffer t
+         )))
+
+;;;;; babel
+
+(setopt
+ ;; Open source block with `org-edit-special' in the same window.
+ org-src-window-setup 'current-window
+
+ ;; Allow babel code execution without confirming it every time.
+ org-confirm-babel-evaluate nil
+
+ ;; Available embedded languages for babel.
+ org-babel-load-languages '((sql . t)
+                            (shell . t)
+                            (emacs-lisp . t)
+                            (python . t)
+                            (plantuml . t))
+
+ ;; Use PlantUML executable instead of `.jar' file together with Java.
+ org-plantuml-exec-mode 'plantuml
+ org-plantuml-jar-path (expand-file-name "~/.nix-profile/lib/plantuml.jar"))
+
+;;;;; footnotes
+
+(setq org-footnote-define-inline nil
+      org-footnote-auto-adjust t)
+
+;;;;; images
+
+(setq org-startup-with-inline-images t
+      org-cycle-inline-images-display t
+      org-image-actual-width '(300))
+
+;;;;; TODO keywords and Priorities
+
+(setq org-todo-keywords
+      '((sequence
+         ;; "󰔌" ; SOMEDAY
+         "󰒅" ; SOMEDAY
+         "󰄱" ; TODO
+         "󰡖" ; NEXT
+         ;; "󰤌" ; IN PROCESS
+         ;; "󱅊" ; IN PROGRESS
+         ;; "󱗝" ; IN PROGRESS
+         "󰔟" ; WAITING
+         "|"
+         "󰄵" ; DONE
+         "󱈎" ; ARCHIVED
+         "󰅘" ; CANCELLED
+         )
+        (sequence "󰃃" "" "|" "󱍻")
+        (sequence "SOMEDAY" "TODO" "NEXT" "IN-PROGRESS" "WAITING" "|"
+                  "DONE" "ARCHIVED" "CANCELLED")
+        (sequence "TOREAD" "READING" "|" "READ")
+        ))
+
+;; Make priority signs be integers from 1 to 5, with 3 as default.
+;; Default priorities are: #A, #B, #C, with #B as default.
+(setq org-priority-highest ?A
+      org-priority-lowest  ?D
+      org-priority-default ?C)
+
+;; Consider all nested entries in the subtree for cookies.
+;; [[info:org#Breaking Down Tasks]]
+(setq org-hierarchical-todo-statistics nil)
+
+;;;;; tags
+
+;; (setq org-use-tag-inheritance nil)
+(setq org-tags-exclude-from-inheritance '("project" "main" "index")
+      org-tags-match-list-sublevels nil)
+
+;;;;; zotero integration
+
+;; Redirect `zotero:' links to the system for handling:
+(with-eval-after-load 'org
+  (org-link-set-parameters
+   "zotero"
+   :follow (lambda (zpath)
+             (browse-url (format "zotero:%s" zpath)))))
+
+;;;; Org files appearence
+;;;;; Prettify symbols mode
+
+;; ("TODO" . "")
+;; ("WAIT" . "")
+;; ("NOPE" . "")
+;; ("DONE" . "")
+;; ("[#A]" . "")
+;; ("[#B]" . "")
+;; ("[#C]" . "")
+;; ("[ ]" . "")
+;; ("[X]" . "")
+;; ("[-]" . "")
+;; (":PROPERTIES:" . "")
+;; (":END:" . "―")
+;; ("#+STARTUP:" . "")
+;; ("#+TITLE: " . "")
+;; ("#+RESULTS:" . "")
+;; ("#+NAME:" . "")
+;; ("#+ROAM_TAGS:" . "")
+;; ("#+FILETAGS:" . "")
+;; ("#+HTML_HEAD:" . "")
+;; ("#+SUBTITLE:" . "")
+;; ("#+AUTHOR:" . "")
+;; (":Effort:" . "")
+;; ("SCHEDULED:" . "")
+;; ("DEADLINE:" . "")
+
+(defun my-org-prettify-symbols ()
+  "Beautify org mode keywords using `prettify-symbols-mode'."
+  (setq prettify-symbols-alist
+        (mapcan (lambda (x) (list x (cons (upcase (car x)) (cdr x))))
+                '(("#+begin_src" . "")
+                  ("#+end_src" . "―")
+                  ("#+begin_example" . "")
+                  ("#+end_example" . "")
+                  ("#+begin_quote" . "")
+                  ("#+end_quote" . "")
+                  ;; ("#+begin_quote" . "")
+                  ;; ("#+end_quote" . "")
+                  ;; ("#+header:" . ?)
+                  ;; ("#+name:" . ?﮸)
+                  ;; ("#+results:" . ?)
+                  ;; ("#+call:" . ?)
+                  ;; (":properties:" . ?)
+                  ;; (":logbook:" . ?)
+                  )))
+  (prettify-symbols-mode +1))
+
+;;;;; org-superstar
+;; • ◦ ‣ ￭ ■ ⋄ ○ □ ▬ ▶ ▸ ◂ ◆
+(leaf org-superstar
+  :elpaca t
+  :hook (org-mode-hook . org-superstar-mode)
+  :custom
+  (org-superstar-remove-leading-stars . nil)
+  (org-superstar-headline-bullets-list . '("●"))
+  ;; (org-superstar-leading-bullet)
+  (org-superstar-item-bullet-alist . '((?+ . ?◦)
+                                       (?- . ?•)
+                                       (?* . ?◆))))
+
+;;;;; org-pretty-tags
+
+(leaf org-pretty-tags
+  :elpaca t
+  :hook (org-mode-hook . org-pretty-tags-mode)
+  :custom (org-pretty-tags-surrogate-strings . '(("attach" . "󰁦")
+                                                 ("ATTACH" . "󰁦"))))
+
+;;;;; org-appear
+
+(leaf org-appear
+  :elpaca t
+  :hook (org-mode-hook . org-appear-mode)
+  :custom (org-hide-emphasis-markers . t))
+
+;;;; org-auto-tangle
+
+(leaf org-auto-tangle
+  :elpaca t
+  :hook (org-mode-hook . org-auto-tangle-mode)
+  ;; :custom (org-auto-tangle-babel-safelist . '("~/.config/emacs/README.org"))
+  )
+
 ;;; Extra facilities
 
 (leaf which-key
@@ -556,15 +925,22 @@ HOOK should be a symbol."
     "z j" (cons "Outline next visible heading"
                 (lambda (count)
                   (interactive "p")
+                  (helix-maybe-deactivate-mark)
                   (outline-next-visible-heading count)
                   (hydra-outline/body)))
     "z k" (cons "Outline previous visible heading"
                 (lambda (count)
                   (interactive "p")
+                  (helix-maybe-deactivate-mark)
                   (outline-previous-visible-heading count)
                   (hydra-outline/body)))
     "z C-j" '("Outline forward same level" . hydra-outline/outline-forward-same-level)
     "z C-k" '("Outline backward same level" . hydra-outline/outline-backward-same-level)
+    "z <return>" (cons "Outline insert heading"
+                       (lambda ()
+                         (interactive)
+                         (outline-insert-heading)
+                         (hydra-outline/body)))
     "z c" 'outline-hide-entry
     "z C" 'outline-hide-leaves
     "z o" 'outline-show-entry
@@ -576,7 +952,6 @@ HOOK should be a symbol."
     "z p" '("Outline path" . outline-hide-other)
     ;; "z >" 'outline-promote
     ;; "z <" 'outline-demote
-    "z <return>" 'outline-insert-heading
     "z M-j" '("Outline move subtree down" . hydra-outline/outline-move-subtree-down)
     "z M-k" '("Outline move subtree up" . hydra-outline/outline-move-subtree-up)
     "z M-h" '("Outline promote" . hydra-outline/outline-promote)
@@ -680,8 +1055,7 @@ Replacement for `lisp-outline-level'."
 (defun my-elisp-find-definitions ()
   "Try `elisp-def', on fail try other xref backends."
   (interactive)
-  (when (region-active-p)
-    (deactivate-mark))
+  (when (region-active-p) (deactivate-mark))
   (or (ignore-errors (call-interactively #'elisp-def))
       (call-interactively #'xref-find-definitions)))
 
@@ -743,25 +1117,29 @@ quits any active region before exiting.  When there is no minibuffer
   ;; ("<return>" . newline)
   :config
   (helix-keymap-set nil 'normal
-    "<backspace>" #'execute-extended-command
-    "g o"   #'exchange-point-and-mark
-    "C-M-;" #'eval-expression ;; default M-; but in Helix it reverse region
-    "M-o"   #'pop-to-mark-command
-    "C-S-o" #'pop-global-mark
-    "C-w n" #'other-window-prefix
-    "g a"   #'describe-char)
+    "<backspace>" 'execute-extended-command
+    "g o"   'exchange-point-and-mark
+    "C-M-;" 'eval-expression ;; default M-; but in Helix it reverse region
+    "M-o"   'pop-to-mark-command
+    "C-S-o" 'pop-global-mark
+    "C-w n" 'other-window-prefix
+    "g a"   'describe-char
+    "z SPC" 'cycle-spacing
+    "z ."   'set-fill-prefix
+    "C-x C-d" 'dired-jump)
   (helix-keymap-set global-map nil
-    "C-x C-b" #'ibuffer       ;; list-buffers
-    "C-x C-r" #'recentf-open) ;; find-file-read-only
+    "C-x C-b" 'ibuffer      ;; list-buffers
+    "C-x C-r" 'recentf-open ;; find-file-read-only
+    "C-x C-d" 'dired-jump)
   ;; <leader> key
   (helix-keymap-set mode-specific-map nil
-    ;; "f x" #'xref-find-apropos
-    "f f" #'find-file
-    "f F" #'+default/find-file-under-here
-    "f d" #'dired
-    "f l" #'locate
+    ;; "f x" 'xref-find-apropos
+    "f f" 'find-file
+    "f F" '+default/find-file-under-here
+    "f d" 'dired
+    "f l" 'locate
     "f r" '("Recent files" . recentf-open)
-    "f R" #'projectile-recentf
+    "f R" 'projectile-recentf
     ;; "f u" '("Sudo this file" . doom/sudo-this-file)
     ;; "f U" '("Sudo find file" . doom/sudo-find-file)
     ;; "f x" '("Open scratch buffer" . doom/open-scratch-buffer)

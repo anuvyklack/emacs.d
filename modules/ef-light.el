@@ -28,11 +28,14 @@
 
 ;;; helix
 (my-custom-theme-set-faces 'ef-light
-  ;; '(helix-mode-line-cursors-indicator
-  ;;   :inherit mode-line-emphasis)
   '(helix-mode-line-cursors-indicator
     :weight bold
-    :inherit ef-themes-mark-other))
+    ;; :inherit mode-line-emphasis
+    :inherit ef-themes-mark-other)
+  '(helix-search-highlight
+    :background "#ffeabb"
+    ;; :inherit ef-themes-search-lazy
+    ))
 
 ;;; org-mode
 ;;;; headings
