@@ -818,7 +818,7 @@ HOOK should be a symbol."
   (org-superstar-remove-leading-stars . nil)
   (org-superstar-headline-bullets-list . '("●"))
   ;; (org-superstar-leading-bullet)
-  (org-superstar-item-bullet-alist . '((?+ . ?◦)
+  (org-superstar-item-bullet-alist . '((? . ?◦)
                                        (?- . ?•)
                                        (?* . ?◆))))
 
@@ -844,6 +844,269 @@ HOOK should be a symbol."
   :hook (org-mode-hook . org-auto-tangle-mode)
   ;; :custom (org-auto-tangle-babel-safelist . '("~/.config/emacs/README.org"))
   )
+
+;;;; org-tempo
+;; Org 9.2 introduced a new template expansion mechanism, combining
+;; `org-insert-structure-template' bound to z, (default binding C-c C-,).
+;; The previous `easy-templates' mechanism (<s Tab) should be enabled manualy.
+;; For more information, refer to the commentary section in `org-tempo.el'.
+;;
+;; Type `<se Tab' to insert emacs-lisp source code block,
+;; type `<sh Tab' to insert bash source block and so on.
+
+(leaf org-tempo
+  :after org
+  :config
+  ;; Elements of length one have a tab appended. Elements of length two are
+  ;; kept as is. Longer elements are truncated to length two. If an element
+  ;; cannot be made unique, an error is raised.
+  (my-add-to-list 'org-structure-template-alist
+                  '(("se" . "src emacs-lisp")
+                    ("sh" . "src sh")
+                    ("sc" . "src cpp")
+                    ("sf" . "src fennel")
+                    ("sl" . "src common-lisp")
+                    ("sm" . "src markdown")
+                    ;; ("sr" . "src rust")
+                    ("sp" . "src python")
+                    ("su" . "src lua"))))
+
+;;;; org-ql
+(leaf org-ql :elpaca t)
+
+;;;; org-roam
+
+(leaf org-roam
+  :elpaca t
+  :global-minor-mode org-roam-db-autosync-mode
+  :custom
+  (org-roam-directory . org-directory)
+  ;; Provide link completion matching outside of Org links.
+  (org-roam-completion-everywhere . t)
+  ;; Make org-roam snappier during sqlite database synchronization.
+  (org-roam-db-gc-threshold . most-positive-fixnum)
+  ;; https://github.com/org-roam/org-roam/issues/576
+  (org-roam-graph-executable . "dot")
+  (org-roam-mode-section-functions . '(org-roam-backlinks-section
+                                       org-roam-reflinks-section
+                                       ;; org-roam-unlinked-references-section
+                                       ))
+  :config
+  (add-to-list 'org-default-properties "ROAM_EXCLUDE"))
+
+;; 5 org-roam hacks by System Crafters
+;; https://systemcrafters.net/build-a-second-brain-in-emacs/5-org-roam-hacks/
+(defun my-org-roam-node-insert-immediate (arg &rest args)
+  (interactive "P")
+  (let ((args (cons arg args))
+        (org-roam-capture-templates (list (append (car org-roam-capture-templates)
+                                                  '(:immediate-finish t)))))
+    (apply #'org-roam-node-insert args)))
+
+(defun my-org-roam-create-untracked-node ()
+  "Create Org-Roam node with `ROAM_EXCLUDE' property."
+  (interactive)
+  (org-id-get-create)
+  (org-set-property "ROAM_EXCLUDE" "t"))
+
+;;;;; Node searching interface in completion menu
+(setq org-roam-node-display-template
+      (format "${title:*} %s %s"
+              (propertize "${doom-type:12}" 'face 'font-lock-keyword-face)
+              (propertize "${doom-tags:42}" 'face '(:inherit org-tag :box nil))))
+
+;;;;; Capture template using Denote filenaming scheme
+
+(setq org-roam-extract-new-file-path "${slug}.org"
+      org-roam-capture-templates
+      `(("d" "denote" plain "%?" :target
+         (file+head "${slug}.org"
+                    ,(concat "#+title:    ${title}\n"
+                             "#+filetags: ${my-tags}"))
+         :immediate-finish t
+         :unnarrowed t)))
+
+(with-eval-after-load 'org-roam
+  ;; Custom `${slug}' function
+  ;; -------------------------
+  ;; The slug function is used to determine the filename to use for a node, based
+  ;; on its title. It is calculated in `org-roam-node-slug'. If you wish to change
+  ;; the default behaviour of the slug function, you should override the entire
+  ;; function.
+  (cl-defmethod org-roam-node-slug ((node org-roam-node))
+    "Return the slug of NODE."
+    (let ((title (org-roam-node-title node))
+          (id (org-roam-node-id node))
+          (slug-trim-chars '(;; Combining Diacritical Marks https://www.unicode.org/charts/PDF/U0300.pdf
+                             768 ;; U+0300 COMBINING GRAVE ACCENT
+                             769 ;; U+0301 COMBINING ACUTE ACCENT
+                             770 ;; U+0302 COMBINING CIRCUMFLEX ACCENT
+                             771 ;; U+0303 COMBINING TILDE
+                             772 ;; U+0304 COMBINING MACRON
+                             774 ;; U+0306 COMBINING BREVE
+                             775 ;; U+0307 COMBINING DOT ABOVE
+                             776 ;; U+0308 COMBINING DIAERESIS
+                             777 ;; U+0309 COMBINING HOOK ABOVE
+                             778 ;; U+030A COMBINING RING ABOVE
+                             780 ;; U+030C COMBINING CARON
+                             795 ;; U+031B COMBINING HORN
+                             803 ;; U+0323 COMBINING DOT BELOW
+                             804 ;; U+0324 COMBINING DIAERESIS BELOW
+                             805 ;; U+0325 COMBINING RING BELOW
+                             807 ;; U+0327 COMBINING CEDILLA
+                             813 ;; U+032D COMBINING CIRCUMFLEX ACCENT BELOW
+                             814 ;; U+032E COMBINING BREVE BELOW
+                             816 ;; U+0330 COMBINING TILDE BELOW
+                             817 ;; U+0331 COMBINING MACRON BELOW
+                             )))
+      (cl-flet* ((nonspacing-mark-p (char)
+                   (memq char slug-trim-chars))
+                 (strip-nonspacing-marks (s)
+                   (string-glyph-compose
+                    (apply #'string (seq-remove #'nonspacing-mark-p
+                                                (string-glyph-decompose s)))))
+                 (cl-replace (title pair)
+                   (replace-regexp-in-string (car pair) (cdr pair) title)))
+        (let* ((pairs `(("[^[:alnum:][:digit:]]" . " ") ;; convert anything not alphanumeric to spaces
+                        ("%s*" . " ") ;; remove sequential spaces
+                        ("^-" . "")   ;; remove starting underscore
+                        ("-$" . ""))) ;; remove ending underscore
+               (slug (-reduce-from #'cl-replace (strip-nonspacing-marks title) pairs)))
+          ;; (downcase slug)
+          (concat id "--" slug)))))
+
+  ;; `${my-tags}' function
+  (cl-defmethod org-roam-node-my-tags ((node org-roam-node))
+    (when-let* ((tags (completing-read-multiple "New note KEYWORDS: "
+                                                (org-roam-tag-completions))))
+      (concat ":" (mapconcat #'identity tags ":") ":"))))
+
+;;;;; org-roam-dailies
+
+;; Note that for daily files to show up in the calendar, they have to be
+;; of format "org-time-string.org".
+(leaf org-roam-dailies
+  :after org-roam
+  :config
+  (setq org-roam-dailies-directory "daily/")
+  (setq org-roam-dailies-capture-templates
+        '(("d" "default" entry "* %?"
+           :target (file+head "%<%Y-%m-%d>.org"
+                              "#+title: %<%Y-%m-%d>\n")
+           :empty-lines 1))))
+
+;;;;; consult-org-roam
+
+(leaf consult-org-roam
+  :elpaca t
+  :after org-roam
+  :global-minor-mode consult-org-roam-mode
+  :custom
+  ;; Use ripgrep for searching with `consult-org-roam-search'.
+  (consult-org-roam-grep-func . #'consult-ripgrep)
+
+  ;; Configure a custom narrow key for `consult-buffer'.
+  (consult-org-roam-buffer-narrow-key . ?r)
+
+  ;; ;; Display org-roam buffers right after non-org-roam buffers in
+  ;; ;; `consult-buffer' (and not down at the bottom).
+  ;; (consult-org-roam-buffer-after-buffers . t)
+  )
+
+;;;;; org-roam-ui
+
+(leaf org-roam-ui
+  :elpaca t
+  :after org-roam
+  :custom
+  (org-roam-ui-sync-theme . t)
+  (org-roam-ui-follow . t)
+  (org-roam-ui-update-on-save . t)
+  (org-roam-ui-follow-mode . t)
+  (org-roam-ui-open-on-start . nil))
+
+;;;;; org-roam-ql
+
+(leaf org-roam-ql
+  :elpaca t
+  :after org-roam)
+
+;;;;; DISABLED org-roam-tags
+
+;; (leaf org-roam-tags
+;;   :elpaca (org-roam-tags :host github :repo "simoninireland/org-roam-tags")
+;;   (helix-keymap-set org-mode-map 'normal
+;;     "" #'org-roam-tags-tag-note          ; "C-c C-g"
+;;     "" #'org-roam-tags-tag-note-at-point ; "C-c g"
+;;     "" #'org-roam-tags-open-tag))        ; "C-c M-g"
+
+;;;;; nursery
+
+(leaf org-roam-dblocks
+  :elpaca (nursery :host github :repo "chrisbarrett/nursery")
+  :hook (org-mode-hook . org-roam-dblocks-autoupdate-mode)
+  :config
+  (defalias 'org-roam-insert-notes-dblock #'org-insert-dblock:notes)
+  (defalias 'org-roam-insert-backlinks-dblock #'org-insert-dblock:backlinks))
+
+;; (use-package org-roam-lazy-previews
+;;   :after org-roam
+;;   :demand t)
+
+;;;; org-bookmarks
+
+(leaf org-bookmarks
+  :elpaca t
+  :after org
+  :commands (org-bookmarks)
+  :init
+  (setq org-bookmarks-file (file-name-concat org-directory "bookmarks.org")
+        org-bookmarks-add-org-capture-template t
+        org-bookmarks-display-screenshot t)
+  (org-bookmarks-add-org-capture-template))
+
+;;;; org-journal
+
+(leaf org-journal
+  :elpaca t
+  :custom
+  ;; When switching from daily to weekly, monthly, yearly, or from weekly,
+  ;; monthly, yearly to daily, you need to invalidate the cache. This has
+  ;; currently to be done manually by calling `org-journal-invalidate-cache'.
+  (org-journal-file-type . 'monthly)
+  (org-extend-today-until . 4)
+  (org-journal-date-format . "%x, %A")) ;; "DATE, WEEKDAY"
+
+;;;; org-web-tools
+
+(leaf org-web-tools
+  :elpaca t
+  ;; :after org
+  :commands (org-web-tools-insert-web-page-as-entry
+             org-web-tools-read-url-as-org
+             org-web-tools-convert-links-to-page-entries
+             org-web-tools-archive-attach
+             org-web-tools-archive-view))
+
+;;;; scrolling over images
+
+(leaf org-sliced-images
+  :elpaca t
+  :global-minor-mode org-sliced-images-mode)
+
+;;;; LaTeX previews
+
+(leaf org-fragtog
+  :elpaca t
+  :after org
+  :hook (org-mode-hook . org-fragtog-mode)
+  :init
+  (setq org-startup-with-latex-preview t
+        org-format-latex-options (-> org-format-latex-options
+                                     (plist-put :scale 0.8)
+                                     ;; (plist-put :foreground 'auto)
+                                     ;; (plist-put :background 'auto)
+                                     )))
 
 ;;; Extra facilities
 
@@ -967,16 +1230,19 @@ Jump: _C-j_, _C-k_  Move: _M-h_, _M-j_, _M-k_, _M-l_
     ("M-k" outline-move-subtree-up)
     ("M-h" outline-promote)
     ("M-l" outline-demote)
+    ("<tab>" outline-cycle)
+    ("C-u" helix-smooth-scroll-up :color blue)
     ;; Scrolling
-    ("C-b" helix-smooth-scroll-page-up)
-    ("C-f" helix-smooth-scroll-page-down)
-    ("C-d" helix-smooth-scroll-down)
-    ("C-u" helix-smooth-scroll-up)
-    ("C-e" helix-mix-scroll-line-down)
-    ("C-y" helix-mix-scroll-line-up)
-    ("z z" helix-smooth-scroll-line-not-to-very-top)
-    ("z t" helix-smooth-scroll-line-to-top)
-    ("z b" helix-smooth-scroll-line-to-bottom))
+    ;; ("C-b" helix-smooth-scroll-page-up)
+    ;; ("C-f" helix-smooth-scroll-page-down)
+    ;; ("C-d" helix-smooth-scroll-down)
+    ;; ("C-u" helix-smooth-scroll-up)
+    ;; ("C-e" helix-mix-scroll-line-down)
+    ;; ("C-y" helix-mix-scroll-line-up)
+    ;; ("z z" helix-smooth-scroll-line-not-to-very-top)
+    ;; ("z t" helix-smooth-scroll-line-to-top)
+    ;; ("z b" helix-smooth-scroll-line-to-bottom)
+    )
 
   ;; (leaf 'foldout
   ;;   :config
@@ -1055,7 +1321,7 @@ Replacement for `lisp-outline-level'."
 (defun my-elisp-find-definitions ()
   "Try `elisp-def', on fail try other xref backends."
   (interactive)
-  (when (region-active-p) (deactivate-mark))
+  (deactivate-mark)
   (or (ignore-errors (call-interactively #'elisp-def))
       (call-interactively #'xref-find-definitions)))
 
@@ -1135,7 +1401,7 @@ quits any active region before exiting.  When there is no minibuffer
   (helix-keymap-set mode-specific-map nil
     ;; "f x" 'xref-find-apropos
     "f f" 'find-file
-    "f F" '+default/find-file-under-here
+    "f F" 'default/find-file-under-here
     "f d" 'dired
     "f l" 'locate
     "f r" '("Recent files" . recentf-open)
