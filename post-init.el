@@ -326,8 +326,7 @@ With universal argument move current window into new tab."
   (vertico-scroll-margin . 2)
   (vertico-cycle . nil)
   (vertico-resize . 'grow-only) ;; Grow and shrink the Vertico minibuffer
-  :hook
-  (minibuffer-setup-hook . vertico-repeat-save)
+  :hook (minibuffer-setup-hook . vertico-repeat-save)
   :bind (vertico-map
          ("C-j" . vertico-next)
          ("C-k" . vertico-previous)
@@ -1183,7 +1182,23 @@ HOOK should be a symbol."
     ;; outline-mark-subtree
     "z <tab>"     'outline-cycle
     "z <backtab>" 'outline-cycle-buffer
-    "z e" 'outline-show-entry
+    "z c" 'outline-hide-subtree
+    ;; "z C" 'outline-hide-leaves
+    "z C" 'outline-hide-body
+    "z o" 'outline-show-entry
+    "z O" 'outline-show-branches
+    "z a" 'outline-toggle-children
+    "z m" 'outline-hide-sublevels
+    "z r" 'outline-show-all
+    "z p" '("Outline path" . outline-hide-other)
+    ;; "z >" 'outline-promote
+    ;; "z <" 'outline-demote
+    "z <return>" (cons "Outline insert heading"
+                       (lambda ()
+                         (interactive)
+                         (outline-insert-heading)
+                         (hydra-outline/body)))
+    ;;; Jump over headings
     "z u" 'outline-up-heading
     "z j" (cons "Outline next visible heading"
                 (lambda (count)
@@ -1199,22 +1214,7 @@ HOOK should be a symbol."
                   (hydra-outline/body)))
     "z C-j" '("Outline forward same level" . hydra-outline/outline-forward-same-level)
     "z C-k" '("Outline backward same level" . hydra-outline/outline-backward-same-level)
-    "z <return>" (cons "Outline insert heading"
-                       (lambda ()
-                         (interactive)
-                         (outline-insert-heading)
-                         (hydra-outline/body)))
-    "z c" 'outline-hide-entry
-    "z C" 'outline-hide-leaves
-    "z o" 'outline-show-entry
-    "z O" 'outline-show-subtree
-    "z m" 'outline-hide-sublevels
-    "z R" 'outline-show-all
-    ;; "z M" #'
-    "z S" '("Outline structure" . outline-hide-body)
-    "z p" '("Outline path" . outline-hide-other)
-    ;; "z >" 'outline-promote
-    ;; "z <" 'outline-demote
+    ;;; Move headings
     "z M-j" '("Outline move subtree down" . hydra-outline/outline-move-subtree-down)
     "z M-k" '("Outline move subtree up" . hydra-outline/outline-move-subtree-up)
     "z M-h" '("Outline promote" . hydra-outline/outline-promote)
