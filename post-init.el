@@ -18,10 +18,13 @@
 
 (leaf f :elpaca t :require t)
 (leaf s :elpaca t :require t)
+(leaf hydra :elpaca t)
+(leaf delight :elpaca t)
+(leaf transient :elpaca t)
+(leaf casual :elpaca t)
 (leaf dash
   :elpaca (dash :wait t)
   :require t)
-(leaf hydra :elpaca t)
 
 ;; ;; Recursively add to `load-path' all folders in
 ;; ;; `$XDG_CONFIG_HOME/emacs/modules/' directory.
@@ -32,6 +35,7 @@
 ;;                     ,@(f-directories modules-dir nil t))))
 
 ;;; Auto-compile Emacs lisp packages
+
 ;; (leaf compile-angel
 ;;   :elpaca t
 ;;   :require t
@@ -70,7 +74,7 @@
 ;; ;; (require 'my-meow)
 ;; (require 'my-helix)
 
-;;; Utils
+;;; My functions
 
 ;; https://stackoverflow.com/questions/24356401/how-to-append-multiple-elements-to-a-list-in-emacs-lisp
 (defun my-add-to-list (list elements &optional append)
@@ -94,6 +98,33 @@ ELEMENTS could be either a list or a single element."
           (mapcar (-lambda ((face . spec))
                     `(,face ((t ,spec))))
                   (list ,@specs))))
+
+(defun my-keymap-set (keymap &rest bindings)
+  "Create keybinding from KEY to DEFINITION in KEYMAP.
+Accepts any number of KEY DEFINITION pairs.
+KEYMAP can be nil, then keybindings will be set in main STATE keymap.
+This function is a wrapper around `keymap-set' that allows to set multiple
+keybindings at once.
+
+KEY, DEFINITION arguments are like those of `keymap-set'.
+If DEFINITION is nil, then keybinding will be unset with `keymap-unset'
+instead.
+
+\(fn KEYMAP &rest [KEY DEFINITION]...)"
+  (declare (indent defun))
+  (unless (cl-evenp (length bindings))
+    (user-error "The number of [KEY DEFINITION] pairs is not even"))
+  (unless keymap (setq keymap (current-global-map)))
+  (while bindings
+    (let ((key (pop bindings))
+          (definition (pop bindings)))
+      (if definition
+          (keymap-set keymap key definition)
+        (keymap-unset keymap key :remove)))))
+
+(defun my-original-value (symbol)
+  "Return SYMBOL's original value."
+  (car (get symbol 'standard-value)))
 
 ;;; Appearance
 
@@ -147,6 +178,7 @@ ELEMENTS could be either a list or a single element."
 
 (leaf rainbow-mode
   :elpaca t
+  :delight t
   :hook (emacs-lisp-mode-hook
          conf-space-mode-hook
          conf-toml-mode-hook
@@ -157,9 +189,60 @@ ELEMENTS could be either a list or a single element."
 
 (setopt prettify-symbols-unprettify-at-point t)
 
+;;;; Scrolling
+
+;; ;; Move point to top/bottom of buffer before signaling a scrolling error.
+;; (setq scroll-error-top-bottom nil)
+
+;; Why is jit-lock-stealth-time nil by default?
+;; https://lists.gnu.org/archive/html/help-gnu-emacs/2022-02/msg00352.html
+(setq jit-lock-stealth-time 1.25 ; Calculate fonts when idle for 1.25 seconds
+      jit-lock-stealth-nice 0.5  ; Seconds between font locking
+      jit-lock-chunk-size 4096)
+
+(setq jit-lock-defer-time 0)
+(with-eval-after-load 'helix
+  ;; Avoid fontification while typing
+  (add-hook 'helix-insert-state-enter-hook (lambda () (setq jit-lock-defer-time 0.25)))
+  (add-hook 'helix-insert-state-exit-hook  (lambda () (setq jit-lock-defer-time 0))))
+
+;;;;; Scrolling with mouse and touchpad
+
+(leaf ultra-scroll
+  :elpaca (ultra-scroll :host github :repo "jdtsmith/ultra-scroll")
+  :global-minor-mode ultra-scroll-mode
+  :custom
+  (mouse-wheel-tilt-scroll . t) ;; Scroll horizontally with mouse side wheel.
+  (mouse-wheel-progressive-speed . nil)
+  ;; Enable smooth scrolling with PageDown and PageUp keys
+  (pixel-scroll-precision-interpolate-page . t)
+  ;; (pixel-scroll-precision-large-scroll-height . 20.0)
+  (pixel-scroll-precision-interpolation-total-time . 0.3)
+  :bind
+  ([remap scroll-up-command] . pixel-scroll-interpolate-down)
+  ([remap scroll-down-command] . pixel-scroll-interpolate-up))
+
+;;;;; Do not jump half the page when point goes out of the screen.
+
+(setopt scroll-conservatively 101)
+
+;; Restore original value for some commands.
+;; Mainly for functions that perform text replacement, to center the screen
+;; on jumping to the next occurrence.
+(dolist (cmd '(dired-do-find-regexp-and-replace
+               projectile-replace
+               projectile-replace-regexp))
+  (advice-add cmd :around #'with-original-scroll-conservatively-value-a))
+
+(defun with-original-scroll-conservatively-value-a (fun &rest args)
+  "Meant to be used as `:around' advice."
+  (let ((scroll-conservatively (my-original-value 'scroll-conservatively)))
+    (apply fun args)))
+
 ;;; Core settings
 
 (leaf emacs
+  :delight (eldoc-mode nil t)
   :custom
   ;; User credentials. Some functionality uses this to identify you,
   ;; e.g. GPG configuration, email clients, file templates and snippets.
@@ -187,29 +270,11 @@ ELEMENTS could be either a list or a single element."
 ;; Keep track of opened files.
 (leaf recentf
   :custom `(recentf-auto-cleanup . ,(if (daemonp) 300))
+  :config (setopt recentf-auto-cleanup (if (daemonp) 300))
   :hook ((after-init-hook . (lambda()
                               (let ((inhibit-message t))
                                 (recentf-mode 1))))
          (kill-emacs-hook . recentf-cleanup)))
-
-(leaf helpful
-  :elpaca t
-  :hook (helpful-mode-hook . outline-minor-mode)
-  :custom (help-window-select . t)
-  :bind (([remap describe-function] . helpful-callable)
-         ([remap describe-variable] . helpful-variable)
-         ([remap describe-command] . helpful-command)
-         ([remap describe-key] . helpful-key)
-         ([remap describe-symbol] . helpful-symbol)
-         (help-map
-          :package help
-          ("F" . describe-face)
-          ("M" . describe-keymap)
-          ("s" . helpful-symbol)
-          ("C-c" . nil)) ;; unbind `describe-copying'
-         (embark-symbol-map
-          :package embark
-          ("h" . helpful-symbol))))
 
 ;; ;; `describe-repeat-maps'
 ;; (leaf repeat
@@ -226,6 +291,38 @@ ELEMENTS could be either a list or a single element."
   ;; :hook prog-mode-hook text-mode-hook conf-mode-hook
   ;; (prog-mode-hook . rainbow-delimiters-mode)
   :hook prog-mode-hook conf-mode-hook)
+
+;;;; Help system
+
+(leaf helpful
+  :elpaca t
+  :require helpful
+  :hook (helpful-mode-hook . outline-minor-mode)
+  :custom (help-window-select . t)
+  :bind `(([remap describe-function] . helpful-callable)
+          ([remap describe-variable] . helpful-variable)
+          ([remap describe-command] . helpful-command)
+          ([remap describe-key] . helpful-key)
+          ([remap describe-symbol] . helpful-symbol))
+  :config
+  (my-keymap-set help-map
+    "F" 'describe-face
+    "M" 'describe-keymap
+    "s" 'helpful-symbol
+    ;; Rebind `b' key from `describe-bindings' to prefix with more binding
+    ;; related commands.
+    "b" `("bindings" . ,(define-keymap
+                          "b" 'describe-bindings
+                          "B" 'embark-bindings ;; alternative for `describe-bindings'
+                          "i" 'which-key-show-minor-mode-keymap
+                          "m" 'which-key-show-major-mode
+                          "t" 'which-key-show-top-level
+                          "f" 'which-key-show-full-keymap
+                          "k" 'which-key-show-keymap))
+    "C-c" nil)) ;; unbind `describe-copying'
+
+;; define-key
+;; global-set-key
 
 ;;; Windows
 ;;;; tab-bar
@@ -263,16 +360,18 @@ ELEMENTS could be either a list or a single element."
   (tab-bar-show . t)
   (tab-bar-history-limit . 20)
   :config
-  (global-set-key [remap winner-undo] #'tab-bar-history-back)
-  (global-set-key [remap winner-redo] #'tab-bar-history-forward)
+  ;; (global-set-key [remap winner-undo] #'tab-bar-history-back)
+  ;; (global-set-key [remap winner-redo] #'tab-bar-history-forward)
+  (keymap-global-set "<remap> <winner-undo>" #'tab-bar-history-back)
+  (keymap-global-set "<remap> <winner-redo>" #'tab-bar-history-forward)
   (dolist (state '(normal motion))
     ;; tab-bar-mode-map
-    (helix-keymap-set nil state
-      "C-<tab>"     #'tab-next
-      "C-<backtab>" #'tab-previous
-      "] t" #'tab-next
-      "[ t" #'tab-previous))
-  (helix-keymap-set helix-window-map nil
+    (helix-keymap-global-set state
+                             "C-<tab>"     #'tab-next
+                             "C-<backtab>" #'tab-previous
+                             "] t" #'tab-next
+                             "[ t" #'tab-previous))
+  (my-keymap-set helix-window-map
     "<tab>"     '("New tab" . my-tab-new)
     "<backtab>" '("Duplicate tab" . tab-duplicate)
     "C-<tab>"   #'other-tab-prefix
@@ -288,7 +387,7 @@ ELEMENTS could be either a list or a single element."
                           "<" #'tab-bar-move-tab-backward
                           "F" #'tab-detach
                           "n" #'other-tab-prefix
-                          ;; "-" #'dired-other-tab
+                          "d" #'dired-other-tab
                           "r" #'tab-rename
                           "u" #'tab-undo)))) ;; Restore last closed tab.
 
@@ -372,6 +471,7 @@ With universal argument move current window into new tab."
          ("M-a" . marginalia-cycle)))
 
 ;;;; corfu
+
 (leaf corfu
   :elpaca t
   :global-minor-mode global-corfu-mode
@@ -561,7 +661,7 @@ HOOK should be a symbol."
     (symbol-value hook)))
 
 ;;; Org-mode
-;;;; Config
+;;;; Variables
 ;;;;; General settings
 (setopt
  ;; The `org-directory' variable must be set before Org loads!
@@ -750,7 +850,7 @@ HOOK should be a symbol."
 (setq org-tags-exclude-from-inheritance '("project" "main" "index")
       org-tags-match-list-sublevels nil)
 
-;;;;; zotero integration
+;;;; zotero integration
 
 ;; Redirect `zotero:' links to the system for handling:
 (with-eval-after-load 'org
@@ -877,7 +977,7 @@ HOOK should be a symbol."
 
 (leaf org-roam
   :elpaca t
-  :global-minor-mode org-roam-db-autosync-mode
+  :hook (org-mode-hook . org-roam-db-autosync-mode)
   :custom
   (org-roam-directory . org-directory)
   ;; Provide link completion matching outside of Org links.
@@ -998,8 +1098,8 @@ HOOK should be a symbol."
 
 (leaf consult-org-roam
   :elpaca t
+  :delight t
   :after org-roam
-  :global-minor-mode consult-org-roam-mode
   :custom
   ;; Use ripgrep for searching with `consult-org-roam-search'.
   (consult-org-roam-grep-func . #'consult-ripgrep)
@@ -1010,12 +1110,14 @@ HOOK should be a symbol."
   ;; ;; Display org-roam buffers right after non-org-roam buffers in
   ;; ;; `consult-buffer' (and not down at the bottom).
   ;; (consult-org-roam-buffer-after-buffers . t)
-  )
+  :config
+  (consult-org-roam-mode))
 
 ;;;;; org-roam-ui
 
 (leaf org-roam-ui
   :elpaca t
+  :delight t
   :after org-roam
   :custom
   (org-roam-ui-sync-theme . t)
@@ -1111,7 +1213,8 @@ HOOK should be a symbol."
 
 (leaf which-key
   :global-minor-mode which-key-mode
-  :custom ((which-key-idle-delay . 1.5)
+  :custom ((which-key-lighter . nil)
+           (which-key-idle-delay . 1.5)
            (which-key-idle-secondary-delay . 0.25)
            (which-key-add-column-padding . 1)
            (which-key-max-description-length . 40)))
@@ -1128,6 +1231,7 @@ HOOK should be a symbol."
           avy-single-candidate-jump t))
 
 ;;;; embark
+
 (leaf embark
   :elpaca t
   :commands (embark-act
@@ -1138,16 +1242,15 @@ HOOK should be a symbol."
              embark-prefix-help-command)
   :setq (prefix-help-command . 'embark-prefix-help-command)
   :config
-  ;; Hide the mode line of the Embark live/completions buffers
+  ;; Hide the modeline of the Embark live/completions buffers.
   (add-to-list 'display-buffer-alist
                '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
                  nil
                  (window-parameters (mode-line-format . none))))
-  :bind (("C-m" . embark-act)
-         ("M-m" . embark-dwim)
-         (help-map
-          :package help
-          ("B" . embark-bindings)) ;; alternative for `describe-bindings'
+  :bind (("C-v" . embark-act)  ;; scroll-up-command
+         ("M-v" . embark-dwim) ;; scroll-down-command
+         (embark-symbol-map
+          ("h" . helpful-symbol))
          ;; (embark-general-map
          ;;  ("C-s" . nil) ;; embark-isearch-forward
          ;;  ("C-r" . nil) ;; embark-isearch-backward
@@ -1167,6 +1270,9 @@ HOOK should be a symbol."
 (leaf outli
   :elpaca (outli :host github :repo "jdtsmith/outli")
   :after helix
+  :delight
+  outline-mode
+  (outline-minor-mode nil t)
   ;; :hook (emacs-lisp-mode-hook . outli-mode)
   ;; :custom
   ;; Use <tab> and S-<tab> to cycle while point is on the button overlay.
@@ -1179,17 +1285,18 @@ HOOK should be a symbol."
    ("<backtab>" . outline-cycle-buffer))
   :defer-config
   (helix-keymap-set outline-minor-mode-map 'normal
-    ;; outline-mark-subtree
     "z <tab>"     'outline-cycle
     "z <backtab>" 'outline-cycle-buffer
     "z c" 'outline-hide-subtree
-    ;; "z C" 'outline-hide-leaves
     "z C" 'outline-hide-body
     "z o" 'outline-show-entry
     "z O" 'outline-show-branches
     "z a" 'outline-toggle-children
     "z m" 'outline-hide-sublevels
+    "z 2" (cons "Outline hide up to 2 sublevels"
+                (lambda () (interactive) (outline-hide-sublevels 2)))
     "z r" 'outline-show-all
+    "z s" 'outline-mark-subtree
     "z p" '("Outline path" . outline-hide-other)
     ;; "z >" 'outline-promote
     ;; "z <" 'outline-demote
@@ -1260,6 +1367,268 @@ Replacement for `lisp-outline-level'."
   (if (match-beginning 1)
       (- (match-end 1) (match-beginning 1))
     0))
+
+;;;; Dired
+;;;;; dired
+
+(leaf dired
+  :after helix
+  :custom
+  ;; -l               :: use a long listing format
+  ;; -a, --all        :: do not ignore entries starting with `.'
+  ;; -A, --almost-all :: do not list implied `.' and `..'
+  ;; -F, --classify   :: append indicator (one of /=>@|) to entries
+  ;; -v               :: natural sort of (version) numbers within text
+  (dired-listing-switches . "-lAhF -v --group-directories-first")
+  ;; (dired-listing-switches . "-l --human-readable --group-directories-first")
+  (dired-dwim-target . t)
+  (dired-auto-revert-buffer . #'dired-buffer-stale-p)
+  (dired-kill-when-opening-new-dired-buffer . t)
+  (delete-by-moving-to-trash . t)
+  (dired-recursive-deletes . 'always) ;; 'top
+  (dired-recursive-copies . 'always)
+  (dired-no-confirm . t)
+  ;; Ask whether destination dirs should get created when copying/removing files.
+  (dired-create-destination-dirs . 'ask)
+  (dired-maybe-use-globstar . t)
+  :hook
+  (dired-mode-hook . dired-hide-details-mode)
+  (dired-mode-hook . hl-line-mode)
+  :config
+  (helix-keymap-set dired-mode-map 'motion
+    "h" 'dired-up-directory
+    "j" 'dired-next-line
+    "k" 'dired-previous-line
+    "l" 'dired-find-file
+    ;; "l" 'dired-open-file ;; from `dired-hacks' package
+    "J" 'dired-goto-file
+    "K" 'dired-do-kill-lines
+    "r" 'dired-do-redisplay
+    "?" 'casual-dired-tmenu
+    ))
+
+(leaf dired-x
+  :custom (dired-omit-files . "\\`[.]?#\\|\\`[.][.]?\\'\\|\\`[.].+")
+  :hook (dired-mode-hook . dired-omit-mode))
+
+(leaf diredc :elpaca t)
+
+;;;;; My dired commands
+
+(defalias 'my-dired-copy-file-name #'dired-copy-filename-as-kill)
+
+(defun my-dired-copy-file-path ()
+  "Copy full path to the file into kill ring."
+  (interactive)
+  (dired-copy-filename-as-kill 0))
+
+(defun dired-do-flagged-delete-permanently ()
+  "Delete files permanently instead of trashing them"
+  (declare (interactive-only t))
+  (interactive nil dired-mode)
+  ;; (interactive)
+  (let ((delete-by-moving-to-trash nil))
+    (dired-do-flagged-delete)))
+
+(defalias 'dired-delete-permanently #'dired-do-flagged-delete-permanently)
+
+(defun my-dired-toggle-omit-mode ()
+  "Toggle `dired-omit-mode' not only in current buffer, but in general."
+  (interactive)
+  (if dired-omit-mode
+      (progn
+        (dired-omit-mode -1)
+        (remove-hook 'dired-mode-hook #'dired-omit-mode))
+    (dired-omit-mode +1)
+    (add-hook 'dired-mode-hook #'dired-omit-mode)))
+
+;;;;; image-dired
+
+;; Use Thumbnail Managing Standard
+(setq image-dired-thumbnail-storage 'standard)  ; 128x128
+;; (setq image-dired-thumbnail-storage 'standard-large)  ; 256x256
+;; (setq image-dired-thumbnail-storage 'standard-x-large) ; 512x512
+
+(setq image-dired-marking-shows-next nil)
+
+;; TODO: xdg-open doesn't worked
+(setq image-dired-external-viewer "qimgv")
+
+;; image-dired-dired-display-image
+;; dired-open-file
+
+;;;; ibuffer
+
+(leaf ibuffer
+  :custom
+  (ibuffer-expert . t) ; Do not ask for confirmation to delete the unmodified buffer.
+  (ibuffer-truncate-lines . t)
+  (ibuffer-show-empty-filter-groups . nil) ; Don't show emtpy filter groups
+  (ibuffer-display-summary . nil)
+  ;; (ibuffer-default-sorting-mode . 'filename/process) ; recency alphabetic major-mode
+  ;; (ibuffer-read-only-char . "%")
+  ;; (ibuffer-modified-char . "*")
+  ;; (ibuffer-marked-char . ">")
+  ;; (ibuffer-locked-char . "L")
+  ;; (ibuffer-deletion-char . "D")
+  (ibuffer-eliding-string . "…")
+  :hook
+  (ibuffer-mode-hook . ibuffer-auto-mode)    ; automatically update ibuffer
+  (ibuffer-mode-hook . hl-line-mode)
+  ;; (ibuffer-hook . (lambda ()
+  ;;                   ;; (hl-line-mode +1)
+  ;;                   (unless hl-line-mode (hl-line-mode +1))))
+  :config
+  (cl-pushnew #'helpful-mode ibuffer-help-buffer-modes)
+  ;; (ibuffer-switch-to-saved-filter-groups "home")
+
+  ;; Custom columns
+  ;; icons column
+  (define-ibuffer-column icon
+    (:name "  ")
+    (let ((icon (if (and (buffer-file-name) (nerd-icons-auto-mode-match?))
+                    (nerd-icons-icon-for-file (file-name-nondirectory (buffer-file-name))
+                                              :v-adjust -0.05)
+                  (nerd-icons-icon-for-mode major-mode :v-adjust -0.05))))
+      (if (symbolp icon)
+          (setq icon (nerd-icons-faicon "nf-fa-file_o" :face 'nerd-icons-dsilver :height 0.8 :v-adjust 0.0))
+        icon)))
+
+  ;; Human readable size column
+  (define-ibuffer-column size
+    (:name "Size"
+           :inline t
+           :header-mouse-map ibuffer-size-header-map)
+    (file-size-human-readable (buffer-size))))
+
+;;;;; layout
+
+(let ((path (if (require 'ibuffer-projectile nil t)
+                'my/project-relative-filename-or-process
+              'filename-and-process)))
+  (setq ibuffer-formats
+        `((mark modified read-only locked
+           " " (icon 2 2 :left :elide)
+           ,(propertize " " 'display `(space :align-to 8))
+           (name 26 -1)
+           "  " ,path)
+          (mark modified read-only locked
+                " " (icon 2 2 :left :elide)
+                ,(propertize " " 'display `(space :align-to 8))
+                (name 30 30 :left :elide)
+                " " (size 6 -1 :right)
+                " " (mode 16 16 :left :elide)
+                ;; ,@(when (require 'ibuffer-vc nil t)
+                ;;     '(" " (vc-status 12 :left)))
+                " " ,path))))
+
+;;;;; ibuffer-vc
+
+;; (leaf ibuffer-vc
+;;   :elpaca t
+;;   :hook (ibuffer-hook . (lambda ()
+;;                           (ibuffer-vc-set-filter-groups-by-vc-root)
+;;                           (unless (eq ibuffer-sorting-mode 'alphabetic)
+;;                             (ibuffer-do-sort-by-alphabetic))))
+;;   ;; :congig
+;;   ;; ibuffer-vc-generate-filter-groups-by-vc-root
+;;   )
+;; 
+;; ;; (setq ibuffer-filter-groups)
+;; 
+;; (defun my-ibuffer-vc-root (buf)
+;;   "Return a cons cell (backend-name . root-dir) for BUF.
+;; If the file is not under version control, nil is returned instead."
+;;   (when-let* ((file-name (funcall ibuffer-vc-buffer-file-name-function buf))
+;;               ((ibuffer-vc--include-file-p file-name))
+;;               (backend (ibuffer-vc--deduce-backend file-name)))
+;;     (let* ((root-fn-name (intern (format "vc-%s-root" (downcase (symbol-name backend)))))
+;;            (root-dir (if (fboundp root-fn-name) ;; git, svn, hg, bzr (at least)
+;;                          (funcall root-fn-name file-name)
+;;                        (pcase backend
+;;                          ((and (or 'darcs 'DARCS)
+;;                                ;; `vc-darcs' is an external package
+;;                                (guard (fboundp 'vc-darcs-find-root)))
+;;                           (vc-darcs-find-root file-name))
+;;                          ((or 'cvs 'CVS) (vc-find-root file-name "CVS"))
+;;                          ((or 'rcs 'RCS) (or (vc-find-root file-name "RCS")
+;;                                              (concat file-name ",v")))
+;;                          ((or 'sccs 'SCCS) (or (vc-find-root file-name "SCCS")
+;;                                                (concat "s." file-name)))
+;;                          ((or 'src 'SRC) (or (vc-find-root file-name ".src")
+;;                                              (concat file-name ",v")))
+;;                          (_ (error "ibuffer-vc: unknown vc backend '%s'" backend))))))
+;;       (cons backend root-dir))))
+;; 
+;; (defun my-ibuffer-generate-filter-groups ()
+;;   "Set Ibuffer filter groups."
+;;   (->> (buffer-list)
+;;        (mapcar #'my-ibuffer-vc-root)
+;;        (delq nil)
+;;        (-uniq)
+;;        (mapcar #'(lambda (vc-root)
+;;                    (list (format "%s: %s" (car vc-root) (cdr vc-root))
+;;                          `(vc-root . ,vc-root))))))
+;; 
+;; (defun my-ibuffer-set-filter-groups ()
+;;   "Set Ibuffer filter groups."
+;;   (setq ibuffer-filter-groups (ibuffer-vc-generate-filter-groups-by-vc-root))
+;;   (when-let ((ibuf (get-buffer "*Ibuffer*")))
+;;     (with-current-buffer ibuf
+;;       (pop-to-buffer ibuf)
+;;       (ibuffer-update nil t))))
+
+;;;;; ibuffer-projectile
+
+;; (->> (buffer-list)
+;;      (mapcar #'ibuffer-projectile-root)
+;;      (delq nil)
+;;      (seq-uniq)
+;;      (mapcar (lambda (root)
+;;                (cons (funcall ibuffer-projectile-group-name-function (car root) (cdr root))
+;;                      `((projectile-root . ,root))))))
+
+;; (leaf ibuffer-projectile
+;;   :elpaca t
+;;   ;; :after ibuffer
+;;   :hook (ibuffer-hook . ibuffer-projectile-set-filter-groups)
+;;   :config
+;;   (setq ibuffer-projectile-prefix (concat (nerd-icons-octicon
+;;                                            "nf-oct-file_directory"
+;;                                            :face ibuffer-filter-group-name-face
+;;                                            :v-adjust -0.05)
+;;                                           " "))
+;;   ;; Render filnames relative to project root
+;;   (define-ibuffer-column my/project-relative-filename-or-process
+;;     (:name "Filename/Process"
+;;      :header-mouse-map ibuffer-filename/process-header-map
+;;      :summarizer
+;;      (lambda (strings)
+;;        (setq strings (delete "" strings))
+;;        (let ((procs (--count (get-text-property 1 'ibuffer-process it)
+;;                              strings))
+;;              (files (length strings)))
+;;          (concat (pcase files
+;;                    (0 "No files")
+;;                    (1 "1 file")
+;;                    (_ (format "%d files" files)))
+;;                  ", "
+;;                  (pcase files
+;;                    (0 "no processes")
+;;                    (1 "1 process")
+;;                    (_ (format "%d processes" procs)))))))
+;;     (let ((filename (ibuffer-make-column-filename buffer mark)))
+;;       (if-let* ((proc (get-buffer-process buffer)))
+;;           (concat (propertize (format "(%s %s)" proc (process-status proc))
+;;                               'font-lock-face 'italic
+;;                               'ibuffer-process proc)
+;;                   (if (< 0 (length filename))
+;;                       (format " %s" filename)
+;;                     ""))
+;;         ;; else
+;;         (if-let* ((root-dir (cdr (ibuffer-projectile-root buffer))))
+;;             (file-relative-name filename root-dir)
+;;           (abbreviate-file-name filename))))))
 
 ;;; Major-modes
 ;;;; Emacs Lisp
@@ -1382,7 +1751,7 @@ quits any active region before exiting.  When there is no minibuffer
   ;; ;; By default binded to `RET', but I rebind `C-m' which is also `RET'.
   ;; ("<return>" . newline)
   :config
-  (helix-keymap-set nil 'normal
+  (helix-keymap-global-set 'normal
     "<backspace>" 'execute-extended-command
     "g o"   'exchange-point-and-mark
     "C-M-;" 'eval-expression ;; default M-; but in Helix it reverse region
@@ -1391,14 +1760,13 @@ quits any active region before exiting.  When there is no minibuffer
     "C-w n" 'other-window-prefix
     "g a"   'describe-char
     "z SPC" 'cycle-spacing
-    "z ."   'set-fill-prefix
-    "C-x C-d" 'dired-jump)
-  (helix-keymap-set global-map nil
-    "C-x C-b" 'ibuffer      ;; list-buffers
+    "z ."   'set-fill-prefix)
+  (my-keymap-set global-map
+    "C-x C-b" 'ibuffer-jump ;; list-buffers
     "C-x C-r" 'recentf-open ;; find-file-read-only
-    "C-x C-d" 'dired-jump)
+    "C-x C-d" 'dired-jump)  ;; list-directory
   ;; <leader> key
-  (helix-keymap-set mode-specific-map nil
+  (my-keymap-set mode-specific-map
     ;; "f x" 'xref-find-apropos
     "f f" 'find-file
     "f F" 'default/find-file-under-here
@@ -1416,7 +1784,7 @@ quits any active region before exiting.  When there is no minibuffer
 ;;   :load-path "~/code/emacs/helix"
 ;;   :require t
 ;;   :config
-;;   ;; (helix-keymap-set nil 'normal
+;;   ;; (helix-keymap-global-set 'normal
 ;;   ;;   "SPC" #'keypad
 ;;   ;;   "C-h k" #'keypad-describe-key)
 ;;   )
