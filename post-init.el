@@ -194,7 +194,7 @@ instead.
 ;; ;; Move point to top/bottom of buffer before signaling a scrolling error.
 ;; (setq scroll-error-top-bottom nil)
 
-;; Why is jit-lock-stealth-time nil by default?
+;; Why is `jit-lock-stealth-time' nil by default?
 ;; https://lists.gnu.org/archive/html/help-gnu-emacs/2022-02/msg00352.html
 (setq jit-lock-stealth-time 1.25 ; Calculate fonts when idle for 1.25 seconds
       jit-lock-stealth-nice 0.5  ; Seconds between font locking
@@ -416,6 +416,7 @@ With universal argument move current window into new tab."
   (completion-category-overrides . '((file (styles partial-completion)))))
 
 ;;;; vertico
+
 (leaf vertico
   :elpaca t
   :after helix
@@ -426,28 +427,32 @@ With universal argument move current window into new tab."
   (vertico-cycle . nil)
   (vertico-resize . 'grow-only) ;; Grow and shrink the Vertico minibuffer
   :hook (minibuffer-setup-hook . vertico-repeat-save)
-  :bind (vertico-map
-         ("C-j" . vertico-next)
-         ("C-k" . vertico-previous)
-         ;; ("<escape>" . meow-motion-mode)
-         ;; ("<escape>" . meow-minibuffer-quit)
-         )
   :config
+  (dolist (state '(normal insert))
+    (my-keymap-set vertico-map
+      "<tab>"     'next-history-element
+      "<backtab>" 'previous-history-element
+      "C-j" 'vertico-next
+      "C-k" 'vertico-previous)
+    (helix-keymap-set vertico-map state
+      ;; "M-<return>" 'vertico-exit-input ;; default setting
+      "C-p" #'consult-yank-from-kill-ring
+      ;; "C-h" (lambda ()
+      ;;         (cond ((eq 'file (vertico--metadata-get 'category))
+      ;;                (call-interactively #'vertico-directory-up))))
+      "C-h" #'vertico-directory-up
+      "C-l" #'vertico-insert
+      ;; Russian
+      "C-о" 'vertico-next
+      "C-л" 'vertico-previous))
   (helix-keymap-set vertico-map 'normal
-    ;; "M-<return>" 'vertico-exit-input ;; default setting
-    "<tab>"     'next-history-element
-    "<backtab>" 'previous-history-element
-    "C-p" 'consult-yank-from-kill-ring
-    "n" 'vertico-next-group
-    "N" 'vertico-previous-group
-    ;; "C-h" (lambda ()
-    ;;         (cond ((eq 'file (vertico--metadata-get 'category))
-    ;;                (call-interactively #'vertico-directory-up))))
-    "C-h" 'vertico-directory-up
-    "C-l" #'vertico-insert
-    ;; Russian
-    "C-о" 'vertico-next
-    "C-л" 'vertico-previous))
+    "g j" 'vertico-next-group
+    "g k" 'vertico-previous-group
+    "z j" 'vertico-next-group
+    "z k" 'vertico-previous-group
+    "n"   'vertico-next-group
+    "N"   'vertico-previous-group)
+  )
 
 (leaf vertico-directory
   :after vertico
@@ -702,7 +707,7 @@ HOOK should be a symbol."
  ;; ;; routines. If so, log them in a drawer, not the content of the note.
  ;; org-log-state-notes-into-drawer t
 
- org-indirect-buffer-display 'current-window
+ ;; org-indirect-buffer-display 'current-window
  org-list-allow-alphabetical t
  ;; org-log-into-drawer t
 
@@ -1630,6 +1635,58 @@ Replacement for `lisp-outline-level'."
 ;;             (file-relative-name filename root-dir)
 ;;           (abbreviate-file-name filename))))))
 
+;;;;; narrow to indirect buffer
+
+(keymap-global-set "<remap> <narrow-to-region>" #'my-narrow-buffer-indirectly)
+(keymap-global-set "<remap> <widen>" #'my-widen-indirectly-narrowed-buffer)
+
+(defvar my--narrowed-base-buffer nil)
+
+;;;###autoload
+(defun my-narrow-buffer-indirectly (beg end)
+  "Restrict editing in this buffer to the current region, indirectly.
+
+This recursively creates indirect clones of the current buffer so that the
+narrowing doesn't affect other windows displaying the same buffer. Call
+`my-widen-indirectly-narrowed-buffer' to undo it (incrementally).
+
+Inspired from http://demonastery.org/2013/04/emacs-evil-narrow-region/"
+  (interactive "r")
+  (when (use-region-p)
+    (deactivate-mark)
+    (let ((orig-buffer (current-buffer)))
+      (with-current-buffer (switch-to-buffer (clone-indirect-buffer nil nil))
+        (narrow-to-region beg end)
+        (setq-local my--narrowed-base-buffer orig-buffer)))))
+
+;;;###autoload
+(defun my-widen-indirectly-narrowed-buffer (&optional arg)
+  "Widens narrowed buffers.
+This command will incrementally kill indirect buffers (under the assumption they
+were created by `my-narrow-buffer-indirectly') and switch to their base buffer.
+
+If ARG is non-nil, then kill all indirect buffers, return the base buffer and
+widen it.
+
+If the current buffer is not an indirect buffer, it is `widen'ed."
+  (interactive "P")
+  (unless (buffer-narrowed-p)
+    (user-error "Buffer isn't narrowed"))
+  (let ((orig-buffer (current-buffer))
+        (base-buffer my--narrowed-base-buffer))
+    (cond ((or (not base-buffer)
+               (not (buffer-live-p base-buffer)))
+           (widen))
+          (arg
+           (let ((buffer orig-buffer)
+                 (buffers-to-kill (list orig-buffer)))
+             (while (setq buffer (buffer-local-value 'my--narrowed-base-buffer buffer))
+               (push buffer buffers-to-kill))
+             (switch-to-buffer (buffer-base-buffer))
+             (mapc #'kill-buffer (remove (current-buffer) buffers-to-kill))))
+          ((switch-to-buffer base-buffer)
+           (kill-buffer orig-buffer)))))
+
 ;;; Major-modes
 ;;;; Emacs Lisp
 
@@ -1778,7 +1835,11 @@ quits any active region before exiting.  When there is no minibuffer
     ;; "f U" '("Sudo find file" . doom/sudo-find-file)
     ;; "f x" '("Open scratch buffer" . doom/open-scratch-buffer)
     ;; "f X" '("Switch to scratch buffer" . doom/switch-to-scratch-buffer)
-    ))
+    )
+
+  (my-keymap-set helix-window-map
+   "b" '("Clone buffer" . clone-indirect-buffer)
+   "B" '("Clone buffer other window" . clone-indirect-buffer-other-window)))
 
 ;; (leaf keypad
 ;;   :load-path "~/code/emacs/helix"
@@ -1788,6 +1849,24 @@ quits any active region before exiting.  When there is no minibuffer
 ;;   ;;   "SPC" #'keypad
 ;;   ;;   "C-h k" #'keypad-describe-key)
 ;;   )
+
+;;;; Info-mode
+
+(leaf info
+  :after helix
+  :config
+  (helix-set-initial-state 'Info-mode 'normal)
+  (helix-keymap-set Info-mode-map 'normal
+    "C-j" #'Info-next
+    "C-k" #'Info-prev
+    "z j" #'Info-forward-node
+    "z k" #'Info-backward-node
+    "z u" #'Info-up
+    "z d" #'Info-directory
+    "z m" #'Info-menu
+    "g m" #'Info-menu
+    "M-h" #'Info-help
+    ))
 
 (provide 'post-init)
 ;;; post-init.el ends here
