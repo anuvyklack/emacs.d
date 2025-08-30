@@ -8,7 +8,7 @@
 (setq package-user-dir (expand-file-name "elpa" minimal-emacs-var-dir))
 (setq user-emacs-directory minimal-emacs-var-dir)
 
-;; Disable `package.el' built-in package manger. I use Elpaca instead.
+;; Disable `package.el' built-in package manger. I use Elpaca.
 (setq minimal-emacs-package-initialize-and-refresh nil)
 
 (provide 'pre-early-init)

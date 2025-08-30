@@ -547,60 +547,62 @@ With universal argument move current window into new tab."
    ;; :preview-key "M-."
    :preview-key '(:debounce 0.4 any))
   (setq consult-narrow-key "<")
-
+  :bind
   ;; C-c bindings are in `mode-specific-map'
-  :bind (("C-c M-x" . consult-mode-command)
-         ("C-c h" . consult-history)
-         ("C-c k" . consult-kmacro)
-         ("C-c m" . consult-man)
-         ("C-c i" . consult-info)
-         ([remap Info-search] . consult-info)
-         ;; C-x bindings are in `ctl-x-map'
-         ("C-x M-:" . consult-complex-command)
-         ("C-x b"   . consult-buffer)
-         ("C-x 4 b" . consult-buffer-other-window)
-         ("C-x 5 b" . consult-buffer-other-frame)
-         ("C-x t b" . consult-buffer-other-tab)
-         ;; ("C-x r b" . consult-bookmark)
-         ;; ("C-x p b" . consult-project-buffer)
-         ;; Custom M-# bindings for fast register access
-         ("M-#" . consult-register-load)
-         ("M-'" . consult-register-store)
-         ("C-M-#" . consult-register)
-         ;; Other custom bindings
-         ;; ("M-y" . consult-yank-pop)
-         ([remap yank-pop] . consult-yank-pop)
-         ;; M-g bindings in `goto-map'
-         ("M-g e" . consult-compile-error)
-         ("M-g f" . consult-flymake)
-         ("M-g g" . consult-goto-line)
-         ("M-g M-g" . consult-goto-line)
-         ("M-g o" . consult-outline)
-         ("M-g m" . consult-mark)
-         ("M-g k" . consult-global-mark)
-         ("M-g i" . consult-imenu)
-         ("M-g I" . consult-imenu-multi)
-         ;; M-s bindings in `search-map'
-         ("M-s d" . consult-find)
-         ("M-s c" . consult-locate)
-         ("M-s g" . consult-grep)
-         ("M-s G" . consult-git-grep)
-         ("M-s r" . consult-ripgrep)
-         ("M-s l" . consult-line)
-         ("M-s L" . consult-line-multi)
-         ("M-s k" . consult-keep-lines)
-         ("M-s u" . consult-focus-lines)
-         ;; Isearch integration
-         ("M-s e" . consult-isearch-history)
-         (isearch-mode-map :package isearch
-                           ("M-e" . consult-isearch-history)
-                           ("M-s e" . consult-isearch-history)
-                           ("M-s l" . consult-line)
-                           ("M-s L" . consult-line-multi))
-         ;; Minibuffer history
-         (minibuffer-local-map :package emacs
-                               ("M-s" . consult-history)
-                               ("M-r" . consult-history))))
+  (("C-c M-x" . consult-mode-command)
+   ("C-c h" . consult-history)
+   ("C-c k" . consult-kmacro)
+   ("C-c m" . consult-man)
+   ("C-c i" . consult-info))
+  ;; C-x bindings are in `ctl-x-map'
+  (("C-x M-:" . consult-complex-command)
+   ("C-x b"   . consult-buffer)
+   ("C-x 4 b" . consult-buffer-other-window)
+   ("C-x 5 b" . consult-buffer-other-frame)
+   ("C-x t b" . consult-buffer-other-tab)
+   ;; ("C-x r b" . consult-bookmark)
+   ;; ("C-x p b" . consult-project-buffer)
+   )
+  ([remap Info-search] . consult-info)
+  ;; Custom M-# bindings for fast register access
+  ("M-#" . consult-register-load)
+  ("M-'" . consult-register-store)
+  ("C-M-#" . consult-register)
+  ;; Other custom bindings
+  ;; ("M-y" . consult-yank-pop)
+  ([remap yank-pop] . consult-yank-pop)
+  ;; M-g bindings in `goto-map'
+  (("M-g e" . consult-compile-error)
+   ("M-g f" . consult-flymake)
+   ("M-g g" . consult-goto-line)
+   ("M-g M-g" . consult-goto-line)
+   ("M-g o" . consult-outline)
+   ("M-g m" . consult-mark)
+   ("M-g k" . consult-global-mark)
+   ("M-g i" . consult-imenu)
+   ("M-g I" . consult-imenu-multi))
+  ([remap imenu] . consult-imenu)
+  ;; M-s bindings in `search-map'
+  (("M-s d" . consult-find)
+   ("M-s c" . consult-locate)
+   ("M-s g" . consult-grep)
+   ("M-s G" . consult-git-grep)
+   ("M-s r" . consult-ripgrep)
+   ("M-s l" . consult-line)
+   ("M-s L" . consult-line-multi)
+   ("M-s k" . consult-keep-lines)
+   ("M-s u" . consult-focus-lines)
+   ;; Isearch integration
+   ("M-s e" . consult-isearch-history))
+  (isearch-mode-map :package isearch
+                    ("M-e" . consult-isearch-history)
+                    ("M-s e" . consult-isearch-history)
+                    ("M-s l" . consult-line)
+                    ("M-s L" . consult-line-multi))
+  ;; Minibuffer history
+  (minibuffer-local-map :package emacs
+                        ("M-s" . consult-history)
+                        ("M-r" . consult-history)))
 
 ;;; IDE
 ;;;; xref (goto definition)
@@ -664,8 +666,6 @@ HOOK should be a symbol."
 
 ;;;; treemacs
 
-;; (leaf treemacs-projectile :elpaca t)
-;; (leaf treemacs-magit :elpaca t)
 ;; (leaf lsp-treemacs :elpaca t)
 
 (leaf treemacs
@@ -684,12 +684,8 @@ HOOK should be a symbol."
   ;;  ("C-x t M-t" . treemacs-find-tag))
   :require t
   :config
-  (setq treemacs-buffer-name-function #'treemacs-default-buffer-name
-        treemacs-buffer-name-prefix " *Treemacs-Buffer-"
-        treemacs-collapse-dirs (if treemacs-python-executable 3 0)
-        treemacs-deferred-git-apply-delay 0.5
+  (setq treemacs-collapse-dirs (if treemacs-python-executable 3 0)
         treemacs-directory-name-transformer #'identity
-        treemacs-display-in-side-window t
         treemacs-eldoc-display 'simple
         treemacs-file-event-delay 2000
         treemacs-file-extension-regex treemacs-last-period-regex-value
@@ -704,16 +700,14 @@ HOOK should be a symbol."
         treemacs-hide-dot-git-directory t
         treemacs-indentation 2
         treemacs-indentation-string " "
-        treemacs-is-never-other-window nil
+        treemacs-is-never-other-window t
         treemacs-max-git-entries 5000
         treemacs-missing-project-action 'ask
-        treemacs-move-files-by-mouse-dragging t
         treemacs-move-forward-on-expand nil
         treemacs-no-png-images nil
         treemacs-no-delete-other-windows t
         treemacs-project-follow-cleanup nil
         treemacs-persist-file (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
-        treemacs-position 'left
         treemacs-read-string-input 'from-child-frame
         treemacs-recenter-distance 0.1
         treemacs-recenter-after-file-follow nil
@@ -723,25 +717,25 @@ HOOK should be a symbol."
         treemacs-litter-directories '("/node_modules" "/.venv" "/.cask")
         treemacs-project-follow-into-home nil
         treemacs-show-cursor nil
-        treemacs-show-hidden-files t
+        treemacs-show-hidden-files t ;; toggled with `treemacs-toggle-show-dotfiles'
         treemacs-silent-filewatch nil
         treemacs-silent-refresh nil
-        treemacs-sorting 'alphabetic-asc
+        treemacs-sorting 'alphabetic-asc ;; 'alphabetic-case-insensitive-asc
         treemacs-select-when-already-in-treemacs 'move-back
         treemacs-space-between-root-nodes t
         treemacs-tag-follow-cleanup t
         treemacs-tag-follow-delay 1.5
-        treemacs-text-scale nil
         treemacs-user-mode-line-format nil
         treemacs-user-header-line-format nil
         treemacs-wide-toggle-width 70
         treemacs-width 35
         treemacs-width-increment 1
         treemacs-width-is-initially-locked t
-        treemacs-workspace-switch-cleanup nil)
+        treemacs-workspace-switch-cleanup nil
+        treemacs-elisp-imenu-expression nil) ;; use default value
   ;; The default width and height of the icons is 22 pixels. If you are
   ;; using a Hi-DPI display, uncomment this to double the icon size.
-  ;;(treemacs-resize-icons 44)
+  ;; (treemacs-resize-icons 44)
   (treemacs-follow-mode t)
   (treemacs-filewatch-mode t)
   (treemacs-fringe-indicator-mode 'always)
@@ -758,11 +752,11 @@ HOOK should be a symbol."
 ;; (leaf treemacs-projectile
 ;;   :elpaca t
 ;;   :after treemacs projectile)
-;; 
-;; (leaf treemacs-icons-dired
-;;   :elpaca t
-;;   :hook (dired-mode-hook . treemacs-icons-dired-enable-once))
-;; 
+
+(leaf treemacs-icons-dired
+  :elpaca t
+  :hook (dired-mode-hook . treemacs-icons-dired-enable-once))
+
 ;; (leaf treemacs-magit
 ;;   :elpaca t
 ;;   :after treemacs magit)
@@ -777,6 +771,10 @@ HOOK should be a symbol."
 ;;   :after treemacs
 ;;   :config (treemacs-set-scope-type 'Tabs))
 
+;;;; imenu
+
+(leaf imenu-list
+  :elpaca t)
 
 ;;; Org-mode
 ;;;; Variables
@@ -800,7 +798,7 @@ HOOK should be a symbol."
 
  org-return-follows-link t
  ;; org-fold-core-style 'overlays
- org-tags-column -80 ; Прижимать тэги к 80 колонке справа.
+ org-tags-column -80 ;; Прижимать тэги к 80 колонке справа.
 
  ;; org-M-RET-may-split-line '((default . t))
  org-insert-heading-respect-content nil
@@ -824,7 +822,7 @@ HOOK should be a symbol."
  org-list-allow-alphabetical t
  ;; org-log-into-drawer t
 
- org-startup-folded 'show2levels ; Initial visibility
+ org-startup-folded 'show2levels ;; Initial visibility
 
  ;; Properties apply also for sublevels.
  org-use-property-inheritance t
@@ -1111,6 +1109,25 @@ HOOK should be a symbol."
   :config
   (add-to-list 'org-default-properties "ROAM_EXCLUDE"))
 
+(leaf consult-org-roam
+  :elpaca t
+  :delight t
+  :after org-roam
+  :custom
+  ;; Use ripgrep for searching with `consult-org-roam-search'.
+  (consult-org-roam-grep-func . #'consult-ripgrep)
+
+  ;; Configure a custom narrow key for `consult-buffer'.
+  (consult-org-roam-buffer-narrow-key . ?r)
+
+  ;; ;; Display org-roam buffers right after non-org-roam buffers in
+  ;; ;; `consult-buffer' (and not down at the bottom).
+  ;; (consult-org-roam-buffer-after-buffers . t)
+  :config
+  (consult-org-roam-mode))
+
+;;;;; my org-roam commands
+
 ;; 5 org-roam hacks by System Crafters
 ;; https://systemcrafters.net/build-a-second-brain-in-emacs/5-org-roam-hacks/
 (defun my-org-roam-node-insert-immediate (arg &rest args)
@@ -1211,25 +1228,6 @@ HOOK should be a symbol."
            :target (file+head "%<%Y-%m-%d>.org"
                               "#+title: %<%Y-%m-%d>\n")
            :empty-lines 1))))
-
-;;;;; consult-org-roam
-
-(leaf consult-org-roam
-  :elpaca t
-  :delight t
-  :after org-roam
-  :custom
-  ;; Use ripgrep for searching with `consult-org-roam-search'.
-  (consult-org-roam-grep-func . #'consult-ripgrep)
-
-  ;; Configure a custom narrow key for `consult-buffer'.
-  (consult-org-roam-buffer-narrow-key . ?r)
-
-  ;; ;; Display org-roam buffers right after non-org-roam buffers in
-  ;; ;; `consult-buffer' (and not down at the bottom).
-  ;; (consult-org-roam-buffer-after-buffers . t)
-  :config
-  (consult-org-roam-mode))
 
 ;;;;; org-roam-ui
 
@@ -1408,8 +1406,8 @@ HOOK should be a symbol."
   (helix-keymap-set outline-minor-mode-map 'normal
     "z <tab>"     'outline-cycle
     "z <backtab>" 'outline-cycle-buffer
-    "z c" 'outline-hide-subtree
-    "z C" 'outline-hide-body
+    "z c" 'outline-hide-body
+    "z C" 'outline-hide-subtree
     "z o" 'outline-show-entry
     "z O" 'outline-show-branches
     "z a" 'outline-toggle-children
@@ -1815,8 +1813,19 @@ If the current buffer is not an indirect buffer, it is `widen'ed."
        (setq-local tab-width 8
                    ;; outline-regexp "[ \t]*;;;\\(;*\\**\\) [^ \t\n]"
                    )
+       ;; imenu-create-index-function
+       (setq imenu-generic-expression
+             '(("Major modes" "^\\s-*(define-derived-mode +\\([^ ()\n]+\\)" 1)
+               ("Minor modes" "^\\s-*(define-\\(?:global\\(?:ized\\)?-minor\\|generic\\|minor\\)-mode +\\([^ ()\n]+\\)" 1)
+               ("Macros" "^\\s-*(\\(?:cl-\\)?def\\(?:ine-compile-macro\\|macro\\) +\\([^ )\n]+\\)" 1)
+               ("Inline functions" "\\s-*(\\(?:cl-\\)?defsubst +\\([^ )\n]+\\)" 1)
+               ("Functions" "^\\s-*(\\(?:cl-\\)?def\\(?:un\\|un\\*\\|method\\|generic\\|-memoized!\\) +\\([^ ,)\n]+\\)" 1)
+               ("Variables" "^\\s-*(\\(def\\(?:c\\(?:onst\\(?:ant\\)?\\|ustom\\)\\|ine-symbol-macro\\|parameter\\|var\\(?:-local\\)?\\)\\)\\s-+\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)" 2)
+               ("Types" "^\\s-*(\\(cl-def\\(?:struct\\|type\\)\\|def\\(?:class\\|face\\|group\\|ine-\\(?:condition\\|error\\|widget\\)\\|package\\|struct\\|t\\(?:\\(?:hem\\|yp\\)e\\)\\)\\)\\s-+'?(?\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)" 2)
+               ("Headings" "^[ \t]*;;;+\\**[ \t]+\\([^\n]+\\)" 1)))
+       ;;; Minor modes
        ;; Order matters because `outline-minor-mode' and `helix-paredit-mode'
-       ;; both binds `C-j' and `C-k', and I want `helix-paredit-mode' bindings
+       ;; both binds `C-j' and `C-k'. I want `helix-paredit-mode' bindings
        ;; overlap `outline-minor-mode' bindings.
        (outli-mode 1)
        (helix-paredit-mode 1)))
@@ -1824,6 +1833,16 @@ If the current buffer is not an indirect buffer, it is `widen'ed."
   ;; ;; Treat `-' char as part of the word on 'w', 'e', 'b', motions.
   ;; (modify-syntax-entry ?- "w" emacs-lisp-mode-syntax-table)
   ;; (modify-syntax-entry ?_ "w" emacs-lisp-mode-syntax-table)
+
+  (with-eval-after-load 'consult-imenu
+    (setf (alist-get 'emacs-lisp-mode consult-imenu-config)
+          '( :toplevel "Headings" ;; "Functions"
+             :types ((?h "Headings"  font-lock-constant-face)
+                     (?f "Functions" font-lock-function-name-face)
+                     (?m "Macros"    font-lock-function-name-face)
+                     ;; (?p "Packages"  font-lock-constant-face)
+                     (?v "Variables" font-lock-variable-name-face)
+                     (?t "Types"     font-lock-type-face)))))
 
   (dolist (keymap (list emacs-lisp-mode-map
                         lisp-data-mode-map))
@@ -1859,7 +1878,8 @@ If the current buffer is not an indirect buffer, it is `widen'ed."
              (remove-hook 'xref-backend-functions #'elisp--xref-backend :local)))
   :init
   (helix-keymap-set emacs-lisp-mode-map 'normal
-    "g d" '("Find definition" . my-elisp-find-definitions)))
+    "g d" '("Find definition" . my-elisp-find-definitions)
+    "C-w g d" '("Find definition other window" . my-elisp-find-definitions-other-window)))
 
 (defun my-elisp-find-definitions ()
   "Try `elisp-def', on fail try other xref backends."
@@ -1868,19 +1888,10 @@ If the current buffer is not an indirect buffer, it is `widen'ed."
   (or (ignore-errors (call-interactively #'elisp-def))
       (call-interactively #'xref-find-definitions)))
 
-(leaf helix-paredit
-  :elpaca
-  paredit
-  (helix-paredit :repo "~/code/emacs/helix-paredit")
-  :after helix
-  ;; :hook (emacs-lisp-mode-hook . helix-paredit-mode)
-  :defer-config
-  (helix-keymap-set helix-paredit-mode-map 'normal
-    "C-c w" 'paredit-wrap-round
-    "C-h" 'helix-paredit-backward
-    "C-j" 'helix-paredit-down-sexp
-    "C-k" 'helix-paredit-backward-up-sexp
-    "C-l" 'helix-paredit-forward))
+(defun my-elisp-find-definitions-other-window ()
+  (interactive)
+  (other-window-prefix)
+  (my-elisp-find-definitions))
 
 (leaf elisp-demos
   :elpaca t
@@ -1888,7 +1899,7 @@ If the current buffer is not an indirect buffer, it is `widen'ed."
   (advice-add 'describe-function-1 :after #'elisp-demos-advice-describe-function-1)
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
 
-;;; Commands
+;;; My Commands
 
 (define-advice keyboard-quit (:around (orig-fun) quit-current-context)
   "Quit the current context.
@@ -1903,13 +1914,14 @@ quits any active region before exiting.  When there is no minibuffer
       (call-interactively orig-fun))))
 
 ;;; Keybindings
-;;;; General Keybindings
 
 ;; Rebind `universal-argument' from `C-u' to `M-u'.
 ;; By default `M-u' is binded to `upcase-word', so we can reuse it,
 ;; and `C-u' I use for scrolling like in Vim.
 (keymap-global-set "M-u" #'universal-argument)
 (keymap-set universal-argument-map "M-u" #'universal-argument-more)
+
+;;;; Helix
 
 (leaf helix
   :elpaca
@@ -1918,12 +1930,8 @@ quits any active region before exiting.  When there is no minibuffer
   :require helix keypad
   :global-minor-mode helix-mode
   :custom
-  ;; Vertical motion starting at end of line keeps to ends of lines.
-  (track-eol . t)
+  (track-eol . t) ; Vertical motion starting at end of line keeps to ends of lines.
   (pixel-scroll-precision-interpolation-total-time . 0.3)
-  :bind
-  ;; ;; By default binded to `RET', but I rebind `C-m' which is also `RET'.
-  ;; ("<return>" . newline)
   :config
   (helix-keymap-global-set 'normal
     "<backspace>" 'execute-extended-command
@@ -1931,32 +1939,14 @@ quits any active region before exiting.  When there is no minibuffer
     "C-M-;" 'eval-expression ;; default M-; but in Helix it reverse region
     "M-o"   'pop-to-mark-command
     "C-S-o" 'pop-global-mark
-    "C-w n" 'other-window-prefix
     "g a"   'describe-char
+    "g i"   'imenu
     "z SPC" 'cycle-spacing
-    "z ."   'set-fill-prefix)
-  (my-keymap-set global-map
-    "C-x C-b" 'ibuffer-jump ;; list-buffers
-    "C-x C-r" 'recentf-open ;; find-file-read-only
-    "C-x C-d" 'dired-jump)  ;; list-directory
-  ;; <leader> key
-  (my-keymap-set mode-specific-map
-    ;; "f x" 'xref-find-apropos
-    "f f" 'find-file
-    "f F" 'default/find-file-under-here
-    "f d" 'dired
-    "f l" 'locate
-    "f r" '("Recent files" . recentf-open)
-    "f R" 'projectile-recentf
-    ;; "f u" '("Sudo this file" . doom/sudo-this-file)
-    ;; "f U" '("Sudo find file" . doom/sudo-find-file)
-    ;; "f x" '("Open scratch buffer" . doom/open-scratch-buffer)
-    ;; "f X" '("Switch to scratch buffer" . doom/switch-to-scratch-buffer)
-    )
-
-  (my-keymap-set helix-window-map
-   "b" '("Clone buffer" . clone-indirect-buffer)
-   "B" '("Clone buffer other window" . clone-indirect-buffer-other-window)))
+    "z ."   'set-fill-prefix
+    ;; helix-window-map
+    "C-w n" 'other-window-prefix
+    "C-w b" '("Clone buffer" . clone-indirect-buffer)
+    "C-w B" '("Clone buffer other window" . clone-indirect-buffer-other-window)))
 
 ;; (leaf keypad
 ;;   :load-path "~/code/emacs/helix"
@@ -1966,6 +1956,37 @@ quits any active region before exiting.  When there is no minibuffer
 ;;   ;;   "SPC" #'keypad
 ;;   ;;   "C-h k" #'keypad-describe-key)
 ;;   )
+
+;;;; <leader> key
+
+(my-keymap-set global-map
+  "C-x C-b" 'ibuffer-jump ;; list-buffers
+  "C-x C-r" 'recentf-open ;; find-file-read-only
+  "C-x C-d" 'dired-jump)  ;; list-directory
+
+;; `mode-specific-map' keymap corresponds to the `C-c' prefix.
+(my-keymap-set mode-specific-map
+  ;; "f x" 'xref-find-apropos
+  "f f" 'find-file
+  "f F" 'default/find-file-under-here
+  "f d" 'dired
+  "f l" 'locate
+  "f r" '("Recent files" . recentf-open)
+  "f R" 'projectile-recentf
+  ;; "f u" '("Sudo this file" . doom/sudo-this-file)
+  ;; "f U" '("Sudo find file" . doom/sudo-find-file)
+  ;; "f x" '("Open scratch buffer" . doom/open-scratch-buffer)
+  ;; "f X" '("Switch to scratch buffer" . doom/switch-to-scratch-buffer)
+  )
+(my-keymap-set mode-specific-map
+  "s" `("search" . ,search-map)
+  ;; "s" `("search" . ,(define-keymap
+  ;;                     "i" #'imenu
+  ;;                     ))
+  "o" `("open" . ,(define-keymap
+                    "t" #'treemacs
+                    "i" #'imenu-list-smart-toggle
+                    )))
 
 ;;;; Info-mode
 
@@ -1984,6 +2005,22 @@ quits any active region before exiting.  When there is no minibuffer
     "g m" #'Info-menu
     "M-h" #'Info-help
     ))
+
+;;;; Paredit
+
+(leaf helix-paredit
+  :elpaca
+  paredit
+  (helix-paredit :repo "~/code/emacs/helix-paredit")
+  :after helix
+  ;; :hook (emacs-lisp-mode-hook . helix-paredit-mode)
+  :defer-config
+  (helix-keymap-set helix-paredit-mode-map 'normal
+    "C-c w" 'paredit-wrap-round
+    "C-h" 'helix-paredit-backward
+    "C-j" 'helix-paredit-down-sexp
+    "C-k" 'helix-paredit-backward-up-sexp
+    "C-l" 'helix-paredit-forward))
 
 (provide 'post-init)
 ;;; post-init.el ends here
