@@ -269,8 +269,9 @@ instead.
 
 ;; Keep track of opened files.
 (leaf recentf
-  :custom `(recentf-auto-cleanup . ,(if (daemonp) 300))
-  :config (setopt recentf-auto-cleanup (if (daemonp) 300))
+  ;; :custom `(recentf-auto-cleanup . ,(if (daemonp) 300 'mode))
+  :config
+  (setopt recentf-auto-cleanup (if (daemonp) 300 'mode))
   :hook ((after-init-hook . (lambda()
                               (let ((inhibit-message t))
                                 (recentf-mode 1))))
@@ -428,19 +429,15 @@ With universal argument move current window into new tab."
   (vertico-resize . 'grow-only) ;; Grow and shrink the Vertico minibuffer
   :hook (minibuffer-setup-hook . vertico-repeat-save)
   :config
+  (my-keymap-set vertico-map
+    "<tab>"     'next-history-element
+    "<backtab>" 'previous-history-element
+    "C-j" 'vertico-next
+    "C-k" 'vertico-previous)
   (dolist (state '(normal insert))
-    (my-keymap-set vertico-map
-      "<tab>"     'next-history-element
-      "<backtab>" 'previous-history-element
-      "C-j" 'vertico-next
-      "C-k" 'vertico-previous)
     (helix-keymap-set vertico-map state
       ;; "M-<return>" 'vertico-exit-input ;; default setting
       "C-p" #'consult-yank-from-kill-ring
-      ;; "C-h" (lambda ()
-      ;;         (cond ((eq 'file (vertico--metadata-get 'category))
-      ;;                (call-interactively #'vertico-directory-up))))
-      "C-h" #'vertico-directory-up
       "C-l" #'vertico-insert
       ;; Russian
       "C-о" 'vertico-next
@@ -451,8 +448,7 @@ With universal argument move current window into new tab."
     "z j" 'vertico-next-group
     "z k" 'vertico-previous-group
     "n"   'vertico-next-group
-    "N"   'vertico-previous-group)
-  )
+    "N"   'vertico-previous-group))
 
 (leaf vertico-directory
   :after vertico
@@ -461,12 +457,13 @@ With universal argument move current window into new tab."
   ;; cleans ~/foo/bar/// to /, and ~/foo/bar/~/ to ~/.
   (rfn-eshadow-update-overlay-hook . vertico-directory-tidy)
   :config
-  (helix-keymap-set vertico-map 'normal
-    "C-h" 'vertico-directory-up
-    ;; "C-h" (lambda ()
-    ;;         (cond ((eq 'file (vertico--metadata-get 'category))
-    ;;                (call-interactively #'vertico-directory-up))))
-    ))
+  (dolist (state ('normal insert))
+    (helix-keymap-set vertico-map state
+      "C-h" 'vertico-directory-up
+      ;; "C-h" (lambda ()
+      ;;         (cond ((eq 'file (vertico--metadata-get 'category))
+      ;;                (call-interactively #'vertico-directory-up))))
+      )))
 
 (leaf marginalia
   :elpaca t
@@ -664,6 +661,122 @@ HOOK should be a symbol."
               (default-value hook))
     ;; else
     (symbol-value hook)))
+
+;;;; treemacs
+
+;; (leaf treemacs-projectile :elpaca t)
+;; (leaf treemacs-magit :elpaca t)
+;; (leaf lsp-treemacs :elpaca t)
+
+(leaf treemacs
+  :elpaca t
+  ;; :init
+  ;; (treemacs-start-on-boot)
+  ;; (with-eval-after-load 'winum
+  ;;   (define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
+  ;; :bind
+  ;; (("M-0"       . treemacs-select-window)
+  ;;  ("C-x t 1"   . treemacs-delete-other-windows)
+  ;;  ("C-x t t"   . treemacs)
+  ;;  ("C-x t d"   . treemacs-select-directory)
+  ;;  ("C-x t B"   . treemacs-bookmark)
+  ;;  ("C-x t C-t" . treemacs-find-file)
+  ;;  ("C-x t M-t" . treemacs-find-tag))
+  :require t
+  :config
+  (setq treemacs-buffer-name-function #'treemacs-default-buffer-name
+        treemacs-buffer-name-prefix " *Treemacs-Buffer-"
+        treemacs-collapse-dirs (if treemacs-python-executable 3 0)
+        treemacs-deferred-git-apply-delay 0.5
+        treemacs-directory-name-transformer #'identity
+        treemacs-display-in-side-window t
+        treemacs-eldoc-display 'simple
+        treemacs-file-event-delay 2000
+        treemacs-file-extension-regex treemacs-last-period-regex-value
+        treemacs-file-follow-delay 0.2
+        treemacs-file-name-transformer #'identity
+        treemacs-follow-after-init t
+        treemacs-expand-after-init t
+        treemacs-find-workspace-method 'find-for-file-or-pick-first
+        treemacs-git-command-pipe ""
+        treemacs-goto-tag-strategy 'refetch-index
+        treemacs-header-scroll-indicators '(nil . "^^^^^^")
+        treemacs-hide-dot-git-directory t
+        treemacs-indentation 2
+        treemacs-indentation-string " "
+        treemacs-is-never-other-window nil
+        treemacs-max-git-entries 5000
+        treemacs-missing-project-action 'ask
+        treemacs-move-files-by-mouse-dragging t
+        treemacs-move-forward-on-expand nil
+        treemacs-no-png-images nil
+        treemacs-no-delete-other-windows t
+        treemacs-project-follow-cleanup nil
+        treemacs-persist-file (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
+        treemacs-position 'left
+        treemacs-read-string-input 'from-child-frame
+        treemacs-recenter-distance 0.1
+        treemacs-recenter-after-file-follow nil
+        treemacs-recenter-after-tag-follow nil
+        treemacs-recenter-after-project-jump 'always
+        treemacs-recenter-after-project-expand 'on-distance
+        treemacs-litter-directories '("/node_modules" "/.venv" "/.cask")
+        treemacs-project-follow-into-home nil
+        treemacs-show-cursor nil
+        treemacs-show-hidden-files t
+        treemacs-silent-filewatch nil
+        treemacs-silent-refresh nil
+        treemacs-sorting 'alphabetic-asc
+        treemacs-select-when-already-in-treemacs 'move-back
+        treemacs-space-between-root-nodes t
+        treemacs-tag-follow-cleanup t
+        treemacs-tag-follow-delay 1.5
+        treemacs-text-scale nil
+        treemacs-user-mode-line-format nil
+        treemacs-user-header-line-format nil
+        treemacs-wide-toggle-width 70
+        treemacs-width 35
+        treemacs-width-increment 1
+        treemacs-width-is-initially-locked t
+        treemacs-workspace-switch-cleanup nil)
+  ;; The default width and height of the icons is 22 pixels. If you are
+  ;; using a Hi-DPI display, uncomment this to double the icon size.
+  ;;(treemacs-resize-icons 44)
+  (treemacs-follow-mode t)
+  (treemacs-filewatch-mode t)
+  (treemacs-fringe-indicator-mode 'always)
+  (when treemacs-python-executable
+    (treemacs-git-commit-diff-mode t))
+
+  (when (executable-find "git")
+    (if treemacs-python-executable
+        (treemacs-git-mode 'deferred)
+      (treemacs-git-mode 'simple)))
+
+  (treemacs-hide-gitignored-files-mode nil))
+
+;; (leaf treemacs-projectile
+;;   :elpaca t
+;;   :after treemacs projectile)
+;; 
+;; (leaf treemacs-icons-dired
+;;   :elpaca t
+;;   :hook (dired-mode-hook . treemacs-icons-dired-enable-once))
+;; 
+;; (leaf treemacs-magit
+;;   :elpaca t
+;;   :after treemacs magit)
+;; 
+;; ;; (use-package treemacs-persp ;;treemacs-perspective if you use perspective.el vs. persp-mode
+;; ;;   :after (treemacs persp-mode) ;;or perspective vs. persp-mode
+;; ;;   :ensure t
+;; ;;   :config (treemacs-set-scope-type 'Perspectives))
+;; 
+;; (leaf treemacs-tab-bar ;;treemacs-tab-bar if you use tab-bar-mode
+;;   :elpaca t
+;;   :after treemacs
+;;   :config (treemacs-set-scope-type 'Tabs))
+
 
 ;;; Org-mode
 ;;;; Variables
@@ -1215,6 +1328,7 @@ HOOK should be a symbol."
                                      )))
 
 ;;; Extra facilities
+;;;; which-key
 
 (leaf which-key
   :global-minor-mode which-key-mode
@@ -1223,6 +1337,8 @@ HOOK should be a symbol."
            (which-key-idle-secondary-delay . 0.25)
            (which-key-add-column-padding . 1)
            (which-key-max-description-length . 40)))
+
+;;;; avy
 
 (leaf avy
   :elpaca t
@@ -1301,7 +1417,7 @@ HOOK should be a symbol."
     "z 2" (cons "Outline hide up to 2 sublevels"
                 (lambda () (interactive) (outline-hide-sublevels 2)))
     "z r" 'outline-show-all
-    "z s" 'outline-mark-subtree
+    "m o" 'outline-mark-subtree
     "z p" '("Outline path" . outline-hide-other)
     ;; "z >" 'outline-promote
     ;; "z <" 'outline-demote
@@ -1653,6 +1769,7 @@ narrowing doesn't affect other windows displaying the same buffer. Call
 Inspired from http://demonastery.org/2013/04/emacs-evil-narrow-region/"
   (interactive "r")
   (when (use-region-p)
+    (helix-carry-linewise-selection)
     (deactivate-mark)
     (let ((orig-buffer (current-buffer)))
       (with-current-buffer (switch-to-buffer (clone-indirect-buffer nil nil))
