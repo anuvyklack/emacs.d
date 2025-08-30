@@ -1749,59 +1749,6 @@ Replacement for `lisp-outline-level'."
 ;;             (file-relative-name filename root-dir)
 ;;           (abbreviate-file-name filename))))))
 
-;;;;; narrow to indirect buffer
-
-(keymap-global-set "<remap> <narrow-to-region>" #'my-narrow-buffer-indirectly)
-(keymap-global-set "<remap> <widen>" #'my-widen-indirectly-narrowed-buffer)
-
-(defvar my--narrowed-base-buffer nil)
-
-;;;###autoload
-(defun my-narrow-buffer-indirectly (beg end)
-  "Restrict editing in this buffer to the current region, indirectly.
-
-This recursively creates indirect clones of the current buffer so that the
-narrowing doesn't affect other windows displaying the same buffer. Call
-`my-widen-indirectly-narrowed-buffer' to undo it (incrementally).
-
-Inspired from http://demonastery.org/2013/04/emacs-evil-narrow-region/"
-  (interactive "r")
-  (when (use-region-p)
-    (helix-carry-linewise-selection)
-    (deactivate-mark)
-    (let ((orig-buffer (current-buffer)))
-      (with-current-buffer (switch-to-buffer (clone-indirect-buffer nil nil))
-        (narrow-to-region beg end)
-        (setq-local my--narrowed-base-buffer orig-buffer)))))
-
-;;;###autoload
-(defun my-widen-indirectly-narrowed-buffer (&optional arg)
-  "Widens narrowed buffers.
-This command will incrementally kill indirect buffers (under the assumption they
-were created by `my-narrow-buffer-indirectly') and switch to their base buffer.
-
-If ARG is non-nil, then kill all indirect buffers, return the base buffer and
-widen it.
-
-If the current buffer is not an indirect buffer, it is `widen'ed."
-  (interactive "P")
-  (unless (buffer-narrowed-p)
-    (user-error "Buffer isn't narrowed"))
-  (let ((orig-buffer (current-buffer))
-        (base-buffer my--narrowed-base-buffer))
-    (cond ((or (not base-buffer)
-               (not (buffer-live-p base-buffer)))
-           (widen))
-          (arg
-           (let ((buffer orig-buffer)
-                 (buffers-to-kill (list orig-buffer)))
-             (while (setq buffer (buffer-local-value 'my--narrowed-base-buffer buffer))
-               (push buffer buffers-to-kill))
-             (switch-to-buffer (buffer-base-buffer))
-             (mapc #'kill-buffer (remove (current-buffer) buffers-to-kill))))
-          ((switch-to-buffer base-buffer)
-           (kill-buffer orig-buffer)))))
-
 ;;; Major-modes
 ;;;; Emacs Lisp
 
