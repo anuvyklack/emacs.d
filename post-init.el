@@ -457,7 +457,7 @@ With universal argument move current window into new tab."
   ;; cleans ~/foo/bar/// to /, and ~/foo/bar/~/ to ~/.
   (rfn-eshadow-update-overlay-hook . vertico-directory-tidy)
   :config
-  (dolist (state ('normal insert))
+  (dolist (state '(normal insert))
     (helix-keymap-set vertico-map state
       "C-h" 'vertico-directory-up
       ;; "C-h" (lambda ()
@@ -520,6 +520,7 @@ With universal argument move current window into new tab."
   ;; Enable automatic preview at point in the *Completions* buffer.
   (completion-list-mode . consult-preview-at-point-mode)
   :setq
+  (consult-narrow-key . "<")
   ;; Configure the register formatting. This improves the register.
   (register-preview-delay . 0.5)
   (register-preview-function . 'consult-register-format)
@@ -546,31 +547,26 @@ With universal argument move current window into new tab."
    consult--source-recent-file consult--source-project-recent-file
    ;; :preview-key "M-."
    :preview-key '(:debounce 0.4 any))
-  (setq consult-narrow-key "<")
   :bind
   ;; C-c bindings are in `mode-specific-map'
   (("C-c M-x" . consult-mode-command)
-   ("C-c h" . consult-history)
+   ("C-c <backspace>" . consult-mode-command)
+   ("C-c H" . consult-history)
    ("C-c k" . consult-kmacro)
-   ("C-c m" . consult-man)
-   ("C-c i" . consult-info))
+   ("C-c M" . consult-man)
+   ("C-c I" . consult-info))
+  ([remap repeat-complex-command] . consult-complex-command)
   ;; C-x bindings are in `ctl-x-map'
-  (("C-x M-:" . consult-complex-command)
-   ("C-x b"   . consult-buffer)
+  (("C-x b"   . consult-buffer)
    ("C-x 4 b" . consult-buffer-other-window)
    ("C-x 5 b" . consult-buffer-other-frame)
    ("C-x t b" . consult-buffer-other-tab)
-   ;; ("C-x r b" . consult-bookmark)
-   ;; ("C-x p b" . consult-project-buffer)
-   )
-  ([remap Info-search] . consult-info)
+   ("C-x r b" . consult-bookmark)
+   ("C-x p b" . consult-project-buffer))
   ;; Custom M-# bindings for fast register access
   ("M-#" . consult-register-load)
   ("M-'" . consult-register-store)
   ("C-M-#" . consult-register)
-  ;; Other custom bindings
-  ;; ("M-y" . consult-yank-pop)
-  ([remap yank-pop] . consult-yank-pop)
   ;; M-g bindings in `goto-map'
   (("M-g e" . consult-compile-error)
    ("M-g f" . consult-flymake)
@@ -581,28 +577,26 @@ With universal argument move current window into new tab."
    ("M-g k" . consult-global-mark)
    ("M-g i" . consult-imenu)
    ("M-g I" . consult-imenu-multi))
-  ([remap imenu] . consult-imenu)
-  ;; M-s bindings in `search-map'
-  (("M-s d" . consult-find)
-   ("M-s c" . consult-locate)
-   ("M-s g" . consult-grep)
-   ("M-s G" . consult-git-grep)
-   ("M-s r" . consult-ripgrep)
-   ("M-s l" . consult-line)
-   ("M-s L" . consult-line-multi)
-   ("M-s k" . consult-keep-lines)
-   ("M-s u" . consult-focus-lines)
-   ;; Isearch integration
-   ("M-s e" . consult-isearch-history))
-  (isearch-mode-map :package isearch
-                    ("M-e" . consult-isearch-history)
-                    ("M-s e" . consult-isearch-history)
-                    ("M-s l" . consult-line)
-                    ("M-s L" . consult-line-multi))
+  ;; `search-map' is binded to `M-s' prefix by default
+  (search-map
+   :package emacs
+   ("f" . consult-find)
+   ("l" . consult-locate)
+   ("g" . consult-grep)
+   ("G" . consult-git-grep)
+   ("r" . consult-ripgrep)
+   ("k" . consult-keep-lines)
+   ("u" . consult-focus-lines))
   ;; Minibuffer history
-  (minibuffer-local-map :package emacs
-                        ("M-s" . consult-history)
-                        ("M-r" . consult-history)))
+  (minibuffer-local-map
+   :package emacs
+   ("C-s" . consult-history)
+   ("C-r" . consult-history))
+  ;; Other custom bindings
+  ;; ("M-y" . consult-yank-pop)
+  ([remap yank-pop] . consult-yank-pop)
+  ([remap imenu] . consult-imenu)
+  ([remap Info-search] . consult-info))
 
 ;;; IDE
 ;;;; xref (goto definition)
@@ -682,8 +676,8 @@ HOOK should be a symbol."
   ;;  ("C-x t B"   . treemacs-bookmark)
   ;;  ("C-x t C-t" . treemacs-find-file)
   ;;  ("C-x t M-t" . treemacs-find-tag))
-  :require t
-  :config
+  ;; :require t
+  :defer-config
   (setq treemacs-collapse-dirs (if treemacs-python-executable 3 0)
         treemacs-directory-name-transformer #'identity
         treemacs-eldoc-display 'simple
@@ -753,9 +747,9 @@ HOOK should be a symbol."
 ;;   :elpaca t
 ;;   :after treemacs projectile)
 
-(leaf treemacs-icons-dired
-  :elpaca t
-  :hook (dired-mode-hook . treemacs-icons-dired-enable-once))
+;; (leaf treemacs-icons-dired
+;;   :elpaca t
+;;   :hook (dired-mode-hook . treemacs-icons-dired-enable-once))
 
 ;; (leaf treemacs-magit
 ;;   :elpaca t
@@ -1359,25 +1353,42 @@ HOOK should be a symbol."
              embark-collect
              embark-bindings
              embark-prefix-help-command)
-  :setq (prefix-help-command . 'embark-prefix-help-command)
+  :custom (prefix-help-command . 'embark-prefix-help-command)
   :config
   ;; Hide the modeline of the Embark live/completions buffers.
   (add-to-list 'display-buffer-alist
                '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
                  nil
                  (window-parameters (mode-line-format . none))))
-  :bind (("C-v" . embark-act)  ;; scroll-up-command
-         ("M-v" . embark-dwim) ;; scroll-down-command
-         (embark-symbol-map
-          ("h" . helpful-symbol))
-         ;; (embark-general-map
-         ;;  ("C-s" . nil) ;; embark-isearch-forward
-         ;;  ("C-r" . nil) ;; embark-isearch-backward
-         ;;  ("m" . mark)) ;; C-SPC
-         ;; (embark-expression-map
-         ;;  ("j" . forward-list)   ;; n
-         ;;  ("k" . backward-list)) ;; p
-         ))
+  :bind
+  ("C-<return>" . embark-act)
+  ("C-v" . embark-act)  ;; scroll-up-command
+  ("M-v" . embark-dwim) ;; scroll-down-command
+  :config
+  (my-keymap-set embark-general-map
+    "C-SPC" nil ;; mark
+    "DEL"   nil ;; delete-region
+    "w"     nil ;; embark-copy-as-kill
+    "y" #'embark-copy-as-kill
+    ;; "m" mark
+    )
+  (my-keymap-set embark-region-map
+    "u" nil ;; upcase-region
+    "l" nil ;; downcase-region
+    ";" nil ;; comment-or-uncomment-region
+    "W" nil ;; write-region
+    "F" #'fill-region-as-paragraph
+    "w" #'whitespace-cleanup-region
+    "n" #'helix-narrow-to-region-indirectly)
+  (my-keymap-set embark-symbol-map
+    "h" 'helpful-symbol)
+  (my-keymap-set embark-heading-map
+    "C-SPC" nil ;; outline-mark-subtree
+    "m" 'outline-mark-subtree)
+  ;; (my-keymap-set embark-expression-map
+  ;;   "j" 'forward-list  ;; n
+  ;;   "k" 'backward-list) ;; p
+  )
 
 (leaf embark-consult
   :elpaca t
@@ -1846,7 +1857,7 @@ Replacement for `lisp-outline-level'."
   (advice-add 'describe-function-1 :after #'elisp-demos-advice-describe-function-1)
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
 
-;;; My Commands
+;;; My commands
 
 (define-advice keyboard-quit (:around (orig-fun) quit-current-context)
   "Quit the current context.
@@ -1859,6 +1870,12 @@ quits any active region before exiting.  When there is no minibuffer
     (unless (or defining-kbd-macro
                 executing-kbd-macro)
       (call-interactively orig-fun))))
+
+(defun my-clone-indirect-buffer-same-window ()
+  (interactive)
+  (-doto (clone-indirect-buffer nil nil)
+    (switch-to-buffer)
+    (set-buffer)))
 
 ;;; Keybindings
 
@@ -1882,18 +1899,33 @@ quits any active region before exiting.  When there is no minibuffer
   :config
   (helix-keymap-global-set 'normal
     "<backspace>" 'execute-extended-command
-    "g o"   'exchange-point-and-mark
     "C-M-;" 'eval-expression ;; default M-; but in Helix it reverse region
+    "C-M-:" 'repeat-complex-command
+    ;; "C-M-:" 'consult-complex-command
     "M-o"   'pop-to-mark-command
     "C-S-o" 'pop-global-mark
-    "g a"   'describe-char
-    "g i"   'imenu
     "z SPC" 'cycle-spacing
     "z ."   'set-fill-prefix
+    ;; goto commands
+    "g <return>" 'consult-goto-line
+    "g :"   'consult-goto-line
+    "g a"   'describe-char
+    "g e"   'consult-compile-error
+    "g n"   'next-error
+    "g p"   'previous-error
+    "g o"   'consult-outline
+    "g i"   'consult-imenu
+    "g I"   'consult-imenu-multi
+    "g m"   'consult-mark
+    "g M"   'consult-global-mark
+    "g /"   'consult-line
+    "g ?"   'consult-line-multi
+    "g -"   'dired-jump
     ;; helix-window-map
     "C-w n" 'other-window-prefix
-    "C-w b" '("Clone buffer" . clone-indirect-buffer)
-    "C-w B" '("Clone buffer other window" . clone-indirect-buffer-other-window)))
+    "C-w b" '("Clone buffer other window" . clone-indirect-buffer-other-window)
+    ;; `clone-indirect-buffer' calls `pop-to-buffer' and opens a new window.
+    "C-w B" '("Clone buffer" . my-clone-indirect-buffer-same-window)))
 
 ;; (leaf keypad
 ;;   :load-path "~/code/emacs/helix"
@@ -1927,13 +1959,13 @@ quits any active region before exiting.  When there is no minibuffer
   )
 (my-keymap-set mode-specific-map
   "s" `("search" . ,search-map)
-  ;; "s" `("search" . ,(define-keymap
-  ;;                     "i" #'imenu
-  ;;                     ))
   "o" `("open" . ,(define-keymap
                     "t" #'treemacs
                     "i" #'imenu-list-smart-toggle
                     )))
+
+(my-keymap-set search-map
+  "i" 'imenu)
 
 ;;;; Info-mode
 
@@ -1968,6 +2000,39 @@ quits any active region before exiting.  When there is no minibuffer
     "C-j" 'helix-paredit-down-sexp
     "C-k" 'helix-paredit-backward-up-sexp
     "C-l" 'helix-paredit-forward))
+
+;;;; Disable Isearch keys
+
+(leaf isearch
+  :config
+  (my-keymap-set global-map
+    "C-s"   nil  ;; isearch-forward
+    "C-M-s" nil  ;; isearch-forward-regexp
+    "C-r"   nil  ;; isearch-backward
+    "C-M-r" nil) ;; isearch-backward-regexp
+  (my-keymap-set search-map
+    "w"   nil  ;; isearch-forward-word
+    "_"   nil  ;; isearch-forward-symbol
+    "."   nil  ;; isearch-forward-symbol-at-point
+    "M-." nil) ;; isearch-forward-thing-at-point
+  (with-eval-after-load 'embark
+    (my-keymap-set embark-general-map
+      "C-s" nil   ;; embark-isearch-forward
+      "C-r" nil)) ;; embark-isearch-backward
+  ;; Delete all `M-' keybindings from `search-map' to make `g' key awailable
+  ;; from the `keypad'.
+  (setq search-map (assq-delete-all 27 search-map)))
+
+;; (leaf isearch
+;;   :bind
+;;   ;; Consult integration
+;;   (isearch-mode-map
+;;    ("M-e"   . consult-isearch-history)
+;;    ("M-s e" . consult-isearch-history)
+;;    ("M-s l" . consult-line)
+;;    ("M-s L" . consult-line-multi))
+;;   (search-map
+;;    ("M-s e" . consult-isearch-history)))
 
 (provide 'post-init)
 ;;; post-init.el ends here
