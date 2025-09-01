@@ -503,7 +503,7 @@ With universal argument move current window into new tab."
 (leaf cape
   :elpaca t
   :commands (cape-dabbrev cape-file cape-elisp-block)
-  :bind ("C-c p" . cape-prefix-map)
+  ;; :bind ("C-c p" . cape-prefix-map)
   :hook
   ;; Add to the global default value of `completion-at-point-functions'
   ;; which is used by `completion-at-point'.
@@ -555,14 +555,14 @@ With universal argument move current window into new tab."
    ("C-c k" . consult-kmacro)
    ("C-c M" . consult-man)
    ("C-c I" . consult-info))
-  ([remap repeat-complex-command] . consult-complex-command)
   ;; C-x bindings are in `ctl-x-map'
   (("C-x b"   . consult-buffer)
    ("C-x 4 b" . consult-buffer-other-window)
    ("C-x 5 b" . consult-buffer-other-frame)
    ("C-x t b" . consult-buffer-other-tab)
-   ("C-x r b" . consult-bookmark)
-   ("C-x p b" . consult-project-buffer))
+   ("C-x r b" . consult-bookmark))
+  ;; "C-x p" bindings are in `project-prefix-map'
+  ("C-x p b" . consult-project-buffer)
   ;; Custom M-# bindings for fast register access
   ("M-#" . consult-register-load)
   ("M-'" . consult-register-store)
@@ -596,9 +596,50 @@ With universal argument move current window into new tab."
   ;; ("M-y" . consult-yank-pop)
   ([remap yank-pop] . consult-yank-pop)
   ([remap imenu] . consult-imenu)
-  ([remap Info-search] . consult-info))
+  ([remap Info-search] . consult-info)
+  ([remap repeat-complex-command] . consult-complex-command)
+  ([remap recentf-open] . consult-recent-file))
 
 ;;; IDE
+;;;; project.el
+
+(setopt project-vc-extra-root-markers '(".projectile"
+                                        ".project"))
+
+(leaf consult-project-extra
+  :elpaca t
+  :bind
+  (project-prefix-map
+   :package project
+   ("p" . consult-project-extra-find)
+   ("P" . consult-project-extra-find-other-window)))
+
+;;;; DISABLED projectile
+
+;; (leaf projectile
+;;   :elpaca t
+;;   :require t
+;;   :global-minor-mode projectile-mode
+;;   :config
+;;   (setopt consult-project-function #'(lambda (_) (projectile-project-root)))
+;;   ;; (setopt projectile-project-search-path (list (file-truename "~"))
+;;   ;;         projectile-auto-discover t)
+;;   )
+;;
+;; (leaf consult-projectile
+;;   :elpaca t
+;;   :after projectile
+;;   :bind (([remap projectile-switch-to-buffer] . consult-projectile-switch-to-buffer)
+;;          ([remap projectile-find-dir] . consult-projectile-find-dir)
+;;          ([remap projectile-find-file] . consult-projectile-find-file)
+;;          ([remap projectile-recentf] . consult-projectile-recentf)
+;;          ;; ([remap projectile-switch-project] . consult-projectile-switch-project)
+;;          ([remap projectile-switch-project] . consult-projectile)))
+;;
+;; ;; The multiview includes initially buffers, files and known projects.  To include
+;; ;; recent files and directires add `consult-projectile--source-projectile-dir' and/or
+;; ;; `consult-projectile--source-projectile-recentf' to `consult-projectile-sources'.
+
 ;;;; xref (goto definition)
 
 ;; (leaf dumb-jump
@@ -657,6 +698,11 @@ HOOK should be a symbol."
               (default-value hook))
     ;; else
     (symbol-value hook)))
+
+;;;; imenu
+
+(leaf imenu-list
+  :elpaca t)
 
 ;;;; treemacs
 
@@ -764,11 +810,6 @@ HOOK should be a symbol."
 ;;   :elpaca t
 ;;   :after treemacs
 ;;   :config (treemacs-set-scope-type 'Tabs))
-
-;;;; imenu
-
-(leaf imenu-list
-  :elpaca t)
 
 ;;; Org-mode
 ;;;; Variables
@@ -1531,7 +1572,7 @@ Replacement for `lisp-outline-level'."
     "k" 'dired-previous-line
     "l" 'dired-find-file
     ;; "l" 'dired-open-file ;; from `dired-hacks' package
-    "J" 'dired-goto-file
+    "/" 'dired-goto-file
     "K" 'dired-do-kill-lines
     "r" 'dired-do-redisplay
     "?" 'casual-dired-tmenu
@@ -1945,24 +1986,27 @@ quits any active region before exiting.  When there is no minibuffer
 
 ;; `mode-specific-map' keymap corresponds to the `C-c' prefix.
 (my-keymap-set mode-specific-map
-  ;; "f x" 'xref-find-apropos
-  "f f" 'find-file
-  "f F" 'default/find-file-under-here
-  "f d" 'dired
-  "f l" 'locate
-  "f r" '("Recent files" . recentf-open)
-  "f R" 'projectile-recentf
-  ;; "f u" '("Sudo this file" . doom/sudo-this-file)
-  ;; "f U" '("Sudo find file" . doom/sudo-find-file)
-  ;; "f x" '("Open scratch buffer" . doom/open-scratch-buffer)
-  ;; "f X" '("Switch to scratch buffer" . doom/switch-to-scratch-buffer)
-  )
-(my-keymap-set mode-specific-map
-  "s" `("search" . ,search-map)
+  "'"  '("Vertico repeat" . vertico-repeat)
+  "\"" '("Select vertico session" . vertico-repeat-select)
+  "f" (cons "file/find"
+            (define-keymap
+              ;; "x" 'xref-find-apropos
+              "f" 'find-file
+              "F" 'consult-find
+              "d" 'dired
+              "l" 'locate
+              "r" '("Recent files" . recentf-open)
+              ;; "R" 'projectile-recentf
+              ;; "u" '("Sudo this file" . doom/sudo-this-file)
+              ;; "U" '("Sudo find file" . doom/sudo-find-file)
+              ;; "x" '("Open scratch buffer" . doom/open-scratch-buffer)
+              ;; "X" '("Switch to scratch buffer" . doom/switch-to-scratch-buffer)
+              ))
   "o" `("open" . ,(define-keymap
-                    "t" #'treemacs
-                    "i" #'imenu-list-smart-toggle
-                    )))
+                    "t" 'treemacs
+                    "i" 'imenu-list-smart-toggle))
+  "s" `("search" . ,search-map)
+  "p" `("project" . ,project-prefix-map))
 
 (my-keymap-set search-map
   "i" 'imenu)
@@ -1974,6 +2018,16 @@ quits any active region before exiting.  When there is no minibuffer
   :config
   (helix-set-initial-state 'Info-mode 'normal)
   (helix-keymap-set Info-mode-map 'normal
+    "u"   #'Info-up
+    "d"   #'Info-directory
+    "s"   #'Info-search
+    "S"   #'Info-search-case-sensitively
+    "i"   #'Info-index
+    "I"   #'Info-virtual-index
+    "a"   #'info-apropos
+
+    "g t" #'Info-toc
+
     "C-j" #'Info-next
     "C-k" #'Info-prev
     "z j" #'Info-forward-node
@@ -1983,7 +2037,11 @@ quits any active region before exiting.  When there is no minibuffer
     "z m" #'Info-menu
     "g m" #'Info-menu
     "M-h" #'Info-help
-    ))
+    "H"   #'Info-history
+    "C-i" #'Info-history-forward
+    "C-o" #'Info-history-back
+    "] ]" #'Info-next-reference
+    "[ [" #'Info-prev-reference))
 
 ;;;; Paredit
 
