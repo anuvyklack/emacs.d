@@ -400,15 +400,16 @@ With universal argument move current window into new tab."
 
 ;;; Minibuffer & Completion
 
-(setopt read-file-name-completion-ignore-case t
-        read-buffer-completion-ignore-case t
-        completion-ignore-case t)
+(setopt completion-ignore-case t
+        read-file-name-completion-ignore-case t
+        read-buffer-completion-ignore-case t)
 
 ;; Allow opening new minibuffers from inside existing minibuffers.
 (setopt enable-recursive-minibuffers t)
 (minibuffer-depth-indicate-mode +1)
 
 ;;;; orderless
+
 (leaf orderless
   :elpaca t
   :custom
@@ -519,15 +520,72 @@ With universal argument move current window into new tab."
   :hook
   ;; Enable automatic preview at point in the *Completions* buffer.
   (completion-list-mode . consult-preview-at-point-mode)
-  :setq
-  (consult-narrow-key . "<")
-  ;; Configure the register formatting. This improves the register.
-  (register-preview-delay . 0.5)
-  (register-preview-function . 'consult-register-format)
+  :bind
+  (("C-/" . consult-line)       ;; #'undo
+   ("C-?" . consult-line-multi) ;; #'undo-redo
+   ;; C-c bindings are in `mode-specific-map'
+   (("C-c M-x" . consult-mode-command)
+    ("C-c <backspace>" . consult-mode-command)
+    ("C-c H" . consult-history)
+    ("C-c k" . consult-kmacro)
+    ("C-c M" . consult-man)
+    ("C-c I" . consult-info))
+   ;; C-x bindings are in `ctl-x-map'
+   (("C-x b"   . consult-buffer)
+    ("C-x 4 b" . consult-buffer-other-window)
+    ("C-x 5 b" . consult-buffer-other-frame)
+    ("C-x t b" . consult-buffer-other-tab)
+    ("C-x r b" . consult-bookmark))
+   ;; "C-x p" bindings are in `project-prefix-map'
+   ("C-x p b" . consult-project-buffer)
+   ;; Custom M-# bindings for fast register access
+   ("M-#" . consult-register-load)
+   ("M-'" . consult-register-store)
+   ("C-M-#" . consult-register)
+   ;; M-g bindings in `goto-map'
+   (("M-g e" . consult-compile-error)
+    ("M-g f" . consult-flymake)
+    ("M-g g" . consult-goto-line)
+    ("M-g M-g" . consult-goto-line)
+    ("M-g o" . consult-outline)
+    ("M-g m" . consult-mark)
+    ("M-g k" . consult-global-mark)
+    ("M-g i" . consult-imenu)
+    ("M-g I" . consult-imenu-multi))
+   ;; `search-map' is binded to `M-s' prefix by default
+   (search-map
+    :package emacs
+    ("f" . consult-find)
+    ("l" . consult-locate)
+    ("g" . consult-grep)
+    ("G" . consult-git-grep)
+    ("r" . consult-ripgrep)
+    ("/" . consult-ripgrep)
+    ("k" . consult-keep-lines)
+    ("u" . consult-focus-lines))
+   ;; Minibuffer history
+   (minibuffer-local-map
+    :package emacs
+    ("C-s" . consult-history)
+    ("C-r" . consult-history))
+   ;; Other custom bindings
+   ;; ("M-y" . consult-yank-pop)
+   ([remap repeat-complex-command]        . consult-complex-command)
+   ([remap recentf-open]                  . consult-recent-file)
+   ([remap bookmark-jump]                 . consult-bookmark)
+   ([remap goto-line]                     . consult-goto-line)
+   ([remap imenu]                         . consult-imenu)
+   ([remap Info-search]                   . consult-info)
+   ([remap load-theme]                    . consult-theme)
+   ([remap recentf-open-files]            . consult-recent-file)
+   ([remap switch-to-buffer]              . consult-buffer)
+   ([remap switch-to-buffer-other-window] . consult-buffer-other-window)
+   ([remap switch-to-buffer-other-frame]  . consult-buffer-other-frame)
+   ([remap yank-pop]                      . consult-yank-pop)
+   ;; ([remap locate]                        . consult-locate)
+   )
   :config
-  ;; Tweak the register preview window.
-  (advice-add 'register-preview :override #'consult-register-window)
-
+  (setopt consult-narrow-key "<")
   ;; Aggressive asynchronous that yield instantaneous results. (suitable for
   ;; high-performance systems.) Note: Minad, the author of Consult, does not
   ;; recommend aggressive values.
@@ -538,6 +596,20 @@ With universal argument move current window into new tab."
   ;; (setq consult-async-input-debounce 0.02
   ;;       consult-async-input-throttle 0.05
   ;;       consult-async-refresh-delay 0.02)
+  (setopt consult-async-refresh-delay  0.15
+          consult-async-input-throttle 0.2
+          consult-async-input-debounce 0.1
+          consult-fd-args '((if (executable-find "fdfind" 'remote) "fdfind" "fd")
+                            "--color=never"
+                            ;; https://github.com/sharkdp/fd/issues/839
+                            "--full-path --absolute-path"
+                            "--hidden --exclude .git"))
+
+  ;; Configure the register formatting. This improves the register.
+  (setopt register-preview-delay 0.5
+          register-preview-function #'consult-register-format)
+  ;; Tweak the register preview window.
+  (advice-add 'register-preview :override #'consult-register-window)
 
   (consult-customize
    consult-theme :preview-key '(:debounce 0.2 any)
@@ -546,59 +618,7 @@ With universal argument move current window into new tab."
    consult--source-bookmark consult--source-file-register
    consult--source-recent-file consult--source-project-recent-file
    ;; :preview-key "M-."
-   :preview-key '(:debounce 0.4 any))
-  :bind
-  ;; C-c bindings are in `mode-specific-map'
-  (("C-c M-x" . consult-mode-command)
-   ("C-c <backspace>" . consult-mode-command)
-   ("C-c H" . consult-history)
-   ("C-c k" . consult-kmacro)
-   ("C-c M" . consult-man)
-   ("C-c I" . consult-info))
-  ;; C-x bindings are in `ctl-x-map'
-  (("C-x b"   . consult-buffer)
-   ("C-x 4 b" . consult-buffer-other-window)
-   ("C-x 5 b" . consult-buffer-other-frame)
-   ("C-x t b" . consult-buffer-other-tab)
-   ("C-x r b" . consult-bookmark))
-  ;; "C-x p" bindings are in `project-prefix-map'
-  ("C-x p b" . consult-project-buffer)
-  ;; Custom M-# bindings for fast register access
-  ("M-#" . consult-register-load)
-  ("M-'" . consult-register-store)
-  ("C-M-#" . consult-register)
-  ;; M-g bindings in `goto-map'
-  (("M-g e" . consult-compile-error)
-   ("M-g f" . consult-flymake)
-   ("M-g g" . consult-goto-line)
-   ("M-g M-g" . consult-goto-line)
-   ("M-g o" . consult-outline)
-   ("M-g m" . consult-mark)
-   ("M-g k" . consult-global-mark)
-   ("M-g i" . consult-imenu)
-   ("M-g I" . consult-imenu-multi))
-  ;; `search-map' is binded to `M-s' prefix by default
-  (search-map
-   :package emacs
-   ("f" . consult-find)
-   ("l" . consult-locate)
-   ("g" . consult-grep)
-   ("G" . consult-git-grep)
-   ("r" . consult-ripgrep)
-   ("k" . consult-keep-lines)
-   ("u" . consult-focus-lines))
-  ;; Minibuffer history
-  (minibuffer-local-map
-   :package emacs
-   ("C-s" . consult-history)
-   ("C-r" . consult-history))
-  ;; Other custom bindings
-  ;; ("M-y" . consult-yank-pop)
-  ([remap yank-pop] . consult-yank-pop)
-  ([remap imenu] . consult-imenu)
-  ([remap Info-search] . consult-info)
-  ([remap repeat-complex-command] . consult-complex-command)
-  ([remap recentf-open] . consult-recent-file))
+   :preview-key '(:debounce 0.4 any)))
 
 ;;; IDE
 ;;;; project.el
@@ -652,11 +672,11 @@ With universal argument move current window into new tab."
   :custom ((xref-auto-jump-to-first-definition . 'show)
            (xref-prompt-for-identifier . nil)
            (xref-history-storage . #'xref-window-local-history)
+           ;; (xref-show-definitions-function . #'xref-show-definitions-buffer-at-bottom)
            ;; (xref-show-definitions-function . #'xref-show-definitions-buffer)
-           (xref-show-definitions-function . #'xref-show-definitions-buffer-at-bottom)
-           ;; (xref-show-xrefs-function . #'consult-xref)
-           ;; (xref-show-definitions-function . #'consult-xref)
-           )
+           ;; (xref-show-xrefs-function . #'xref--show-xref-buffer)
+           (xref-show-xrefs-function . #'consult-xref)
+           (xref-show-definitions-function . #'consult-xref))
   :config
   (advice-add 'xref-find-definitions :around #'my-xref-try-all-backends)
   (advice-add 'xref-find-references :around #'my-xref-try-all-backends))
@@ -1403,33 +1423,43 @@ HOOK should be a symbol."
                  (window-parameters (mode-line-format . none))))
   :bind
   ("C-<return>" . embark-act)
+  ("<C-m>" . embark-act)
+  ("M-m" . embark-dwim) ;; scroll-down-command
   ("C-v" . embark-act)  ;; scroll-up-command
   ("M-v" . embark-dwim) ;; scroll-down-command
+  (embark-general-map
+   ("C-v" . embark-select)
+   ("<C-m>" . embark-select)
+   ("y" . embark-copy-as-kill)
+   ;; ("m" . mark)
+   )
+  (embark-region-map
+   ("F" . fill-region-as-paragraph)
+   ("w" . whitespace-cleanup-region)
+   ("n" . helix-narrow-to-region-indirectly))
+  (embark-symbol-map
+   ("h" . helpful-symbol))
+  (embark-heading-map
+   ("m" . outline-mark-subtree))
+  ;; (embark-expression-map
+  ;;  ("j" . forward-list)   ;; n
+  ;;  ("k" . backward-list)) ;; p
   :config
-  (my-keymap-set embark-general-map
-    "C-SPC" nil ;; mark
-    "DEL"   nil ;; delete-region
-    "w"     nil ;; embark-copy-as-kill
-    "y" #'embark-copy-as-kill
-    ;; "m" mark
-    )
-  (my-keymap-set embark-region-map
-    "u" nil ;; upcase-region
-    "l" nil ;; downcase-region
-    ";" nil ;; comment-or-uncomment-region
-    "W" nil ;; write-region
-    "F" #'fill-region-as-paragraph
-    "w" #'whitespace-cleanup-region
-    "n" #'helix-narrow-to-region-indirectly)
-  (my-keymap-set embark-symbol-map
-    "h" 'helpful-symbol)
-  (my-keymap-set embark-heading-map
-    "C-SPC" nil ;; outline-mark-subtree
-    "m" 'outline-mark-subtree)
-  ;; (my-keymap-set embark-expression-map
-  ;;   "j" 'forward-list  ;; n
-  ;;   "k" 'backward-list) ;; p
-  )
+  ;; Unbind keys that I will never use with Helix so as not to clutter up menus.
+  ;; I use `my-keymap-set' because it actually remove keybindings from keymap,
+  ;; while `:bind' only binds them to nil.
+  (with-eval-after-load 'helix
+    (my-keymap-set embark-general-map
+      "C-SPC" nil  ;; mark
+      "DEL"   nil  ;; delete-region
+      "w"     nil) ;; embark-copy-as-kill
+    (my-keymap-set embark-region-map
+      "u" nil  ;; upcase-region
+      "l" nil  ;; downcase-region
+      ";" nil  ;; comment-or-uncomment-region
+      "W" nil) ;; write-region
+    (my-keymap-set embark-heading-map
+      "C-SPC" nil))) ;; outline-mark-subtree
 
 (leaf embark-consult
   :elpaca t
@@ -1801,6 +1831,23 @@ Replacement for `lisp-outline-level'."
 ;;             (file-relative-name filename root-dir)
 ;;           (abbreviate-file-name filename))))))
 
+;;;; tramp
+
+(setopt tramp-default-method "ssh") ;; faster than the default "scp"
+
+
+;;;; Visualize whitespace
+
+;; Enable with `whitespace-mode'
+(leaf whitespace
+  :custom
+  ;; (whitespace-line-column . nil)
+  ;; (whitespace-style . '( face indentation tabs tab-mark spaces space-mark
+  ;;                        newline newline-mark trailing lines-tail))
+  (whitespace-display-mappings . '((tab-mark ?\t [?› ?\t])
+                                   (newline-mark ?\n [?¬ ?\n])
+                                   (space-mark ?\  [?·] [?.]))))
+
 ;;; Major-modes
 ;;;; Emacs Lisp
 
@@ -1809,9 +1856,8 @@ Replacement for `lisp-outline-level'."
   :hook
   (emacs-lisp-mode-hook
    . (lambda ()
-       (setq-local tab-width 8
-                   ;; outline-regexp "[ \t]*;;;\\(;*\\**\\) [^ \t\n]"
-                   )
+       (setq-local tab-width 8)
+       ;; (setq-local outline-regexp "\\(;;;+ \\)")
        ;; imenu-create-index-function
        (setq imenu-generic-expression
              '(("Major modes" "^\\s-*(define-derived-mode +\\([^ ()\n]+\\)" 1)
@@ -1822,12 +1868,14 @@ Replacement for `lisp-outline-level'."
                ("Variables" "^\\s-*(\\(def\\(?:c\\(?:onst\\(?:ant\\)?\\|ustom\\)\\|ine-symbol-macro\\|parameter\\|var\\(?:-local\\)?\\)\\)\\s-+\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)" 2)
                ("Types" "^\\s-*(\\(cl-def\\(?:struct\\|type\\)\\|def\\(?:class\\|face\\|group\\|ine-\\(?:condition\\|error\\|widget\\)\\|package\\|struct\\|t\\(?:\\(?:hem\\|yp\\)e\\)\\)\\)\\s-+'?(?\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)" 2)
                ("Headings" "^[ \t]*;;;+\\**[ \t]+\\([^\n]+\\)" 1)))
-       ;;; Minor modes
+       ;; Minor modes
+       ;; -----------
        ;; Order matters because `outline-minor-mode' and `helix-paredit-mode'
        ;; both binds `C-j' and `C-k'. I want `helix-paredit-mode' bindings
        ;; overlap `outline-minor-mode' bindings.
        (outli-mode 1)
        (helix-paredit-mode 1)))
+  (lisp-data-mode-hook . helix-paredit-mode)
   :config
   ;; ;; Treat `-' char as part of the word on 'w', 'e', 'b', motions.
   ;; (modify-syntax-entry ?- "w" emacs-lisp-mode-syntax-table)
@@ -1846,7 +1894,7 @@ Replacement for `lisp-outline-level'."
   (dolist (keymap (list emacs-lisp-mode-map
                         lisp-data-mode-map))
     (helix-keymap-set keymap 'normal
-      "C-c k" '("Documentation" . helpful-at-point)
+      ;; "C-c k" '("Documentation" . helpful-at-point)
       "M" '("Documentation" . helpful-at-point))))
 
 ;; ;; Extra faces definded by `lisp-extra-font-lock' package:
@@ -1940,6 +1988,7 @@ quits any active region before exiting.  When there is no minibuffer
   :config
   (helix-keymap-global-set 'normal
     "<backspace>" 'execute-extended-command
+    "C-;"   'exchange-point-and-mark
     "C-M-;" 'eval-expression ;; default M-; but in Helix it reverse region
     "C-M-:" 'repeat-complex-command
     ;; "C-M-:" 'consult-complex-command
@@ -1959,11 +2008,13 @@ quits any active region before exiting.  When there is no minibuffer
     "g I"   'consult-imenu-multi
     "g m"   'consult-mark
     "g M"   'consult-global-mark
-    "g /"   'consult-line
-    "g ?"   'consult-line-multi
-    "g -"   'dired-jump
+    "g /"   'consult-ripgrep
+    ;; "g /"   'consult-line
+    ;; "g ?"   'consult-line-multi
+    ;; "g -"   'dired-jump
     ;; helix-window-map
     "C-w n" 'other-window-prefix
+    "C-w N" 'other-tab-prefix
     "C-w b" '("Clone buffer other window" . clone-indirect-buffer-other-window)
     ;; `clone-indirect-buffer' calls `pop-to-buffer' and opens a new window.
     "C-w B" '("Clone buffer" . my-clone-indirect-buffer-same-window)))
@@ -1986,8 +2037,11 @@ quits any active region before exiting.  When there is no minibuffer
 
 ;; `mode-specific-map' keymap corresponds to the `C-c' prefix.
 (my-keymap-set mode-specific-map
-  "'"  '("Vertico repeat" . vertico-repeat)
+  "'" '("Vertico repeat" . vertico-repeat)
   "\"" '("Select vertico session" . vertico-repeat-select)
+  "/" 'consult-ripgrep
+  "?" 'consult-line-multi
+  "-" 'dired-jump
   "f" (cons "file/find"
             (define-keymap
               ;; "x" 'xref-find-apropos
@@ -2018,30 +2072,31 @@ quits any active region before exiting.  When there is no minibuffer
   :config
   (helix-set-initial-state 'Info-mode 'normal)
   (helix-keymap-set Info-mode-map 'normal
-    "u"   #'Info-up
-    "d"   #'Info-directory
-    "s"   #'Info-search
-    "S"   #'Info-search-case-sensitively
-    "i"   #'Info-index
-    "I"   #'Info-virtual-index
-    "a"   #'info-apropos
+    "u" 'Info-up
+    "d" 'Info-directory
+    "s" 'Info-search
+    "S" 'Info-search-case-sensitively
+    "i" 'Info-index
+    "I" 'Info-virtual-index
+    "a" 'info-apropos
+    "M" 'helpful-at-point
 
-    "g t" #'Info-toc
+    "g t" 'Info-toc
 
-    "C-j" #'Info-next
-    "C-k" #'Info-prev
-    "z j" #'Info-forward-node
-    "z k" #'Info-backward-node
-    "z u" #'Info-up
-    "z d" #'Info-directory
-    "z m" #'Info-menu
-    "g m" #'Info-menu
-    "M-h" #'Info-help
-    "H"   #'Info-history
-    "C-i" #'Info-history-forward
-    "C-o" #'Info-history-back
-    "] ]" #'Info-next-reference
-    "[ [" #'Info-prev-reference))
+    "C-j" 'Info-next
+    "C-k" 'Info-prev
+    "z j" 'Info-forward-node
+    "z k" 'Info-backward-node
+    "z u" 'Info-up
+    "z d" 'Info-directory
+    "z m" 'Info-menu
+    "g m" 'Info-menu
+    "M-h" 'Info-help
+    "H"   'Info-history
+    "C-<i>" 'Info-history-forward
+    "C-o" 'Info-history-back
+    "] ]" 'Info-next-reference
+    "[ [" 'Info-prev-reference))
 
 ;;;; Paredit
 
