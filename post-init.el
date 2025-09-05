@@ -325,6 +325,26 @@ instead.
 ;; define-key
 ;; global-set-key
 
+;;;; Distinguish `TAB' from `C-i' and `RET' from `C-m'
+
+(defun helix-make-C-i-and-C-m-available ()
+  "Emacs can't distinguish `TAB' from `C-i' and `RET' from `C-m'."
+  (when (display-graphic-p) ;; do translation only in gui
+    (keymap-set input-decode-map "C-i" [C-i])
+    (keymap-set input-decode-map "C-m" [C-m])))
+
+(helix-make-C-i-and-C-m-available)
+
+;; for daemon mode
+(add-hook 'after-make-frame-functions
+          #'(lambda (frame)
+              (with-selected-frame frame
+                (helix-make-C-i-and-C-m-available))))
+
+;; (single-key-description 'C-i)
+;; (key-valid-p "<C-i>")
+;; (key-valid-p "C-<i>")
+
 ;;; Windows
 ;;;; tab-bar
 
@@ -415,7 +435,32 @@ With universal argument move current window into new tab."
   :custom
   (completion-styles . '(orderless basic))
   (completion-category-defaults . nil)
-  (completion-category-overrides . '((file (styles partial-completion)))))
+  ;; note that despite override in the name orderless can still be used in
+  ;; find-file etc.
+  (completion-category-overrides . '((file (styles orderless partial-completion))))
+  ;; (orderless-component-separator . #'orderless-escapable-split-on-space)
+  :config
+
+  ;; Default values
+  (setq orderless-affix-dispatch-alist '((?% . char-fold-to-regexp)
+                                         (?! . orderless-not)
+                                         (?& . orderless-annotation)
+                                         (?, . orderless-initialism)
+                                         (?= . orderless-literal)
+                                         (?^ . orderless-literal-prefix)
+                                         (?~ . orderless-flex))
+        orderless-style-dispatchers '(orderless-affix-dispatch))
+  ;; ;; Doom values
+  ;; (setq orderless-affix-dispatch-alist '((?% . char-fold-to-regexp)
+  ;;                                        (?! . orderless-without-literal)
+  ;;                                        (?& . orderless-annotation)
+  ;;                                        (?` . orderless-initialism)
+  ;;                                        (?= . orderless-literal)
+  ;;                                        (?^ . orderless-literal-prefix)
+  ;;                                        (?~ . orderless-flex))
+  ;;       orderless-style-dispatchers '(+vertico-orderless-dispatch
+  ;;                                     +vertico-orderless-disambiguation-dispatch))
+  )
 
 ;;;; vertico
 
@@ -431,10 +476,13 @@ With universal argument move current window into new tab."
   :hook (minibuffer-setup-hook . vertico-repeat-save)
   :config
   (my-keymap-set vertico-map
-    "<tab>"     'next-history-element
-    "<backtab>" 'previous-history-element
     "C-j" 'vertico-next
-    "C-k" 'vertico-previous)
+    "C-k" 'vertico-previous
+    "M-j" 'previous-history-element
+    "M-k" 'next-history-element
+    ;; "<tab>"     'previous-history-element
+    ;; "<backtab>" 'next-history-element
+    )
   (dolist (state '(normal insert))
     (helix-keymap-set vertico-map state
       ;; "M-<return>" 'vertico-exit-input ;; default setting
@@ -473,47 +521,7 @@ With universal argument move current window into new tab."
   :bind (minibuffer-local-map
          ("M-a" . marginalia-cycle)))
 
-;;;; corfu
-
-(leaf corfu
-  :elpaca t
-  :global-minor-mode global-corfu-mode
-  :custom
-  (corfu-auto . t)
-  (corfu-auto-delay . 0.24)
-  (corfu-auto-prefix . 2)
-  (corfu-cycle . t)
-  (corfu-count . 16)
-  (corfu-max-width . 120)
-  (corfu-quit-at-boundary . 'separator) ;; M-SPC to continue completion.
-  (corfu-quit-no-match . 'separator)
-  ;; When the completion popup is visible, by default the current candidate is
-  ;; previewed into the buffer, and further input commits that candidate as
-  ;; previewed. The feature is in line with other common editors.
-  ;; - t :: non-inserting preview
-  (corfu-preview-current . 'insert)
-  (corfu-preselect . 'prompt)
-  (corfu-on-exact-match . nil) ;; Handling of exact matches
-  (global-corfu-minibuffer . t)
-  (tab-always-indent . 'complete)
-  (tab-first-completion . 'word)
-  ;; Disable Ispell completion function. As an alternative try `cape-dict'.
-  (text-mode-ispell-word-completion . nil))
-
-;;;; cape
-(leaf cape
-  :elpaca t
-  :commands (cape-dabbrev cape-file cape-elisp-block)
-  ;; :bind ("C-c p" . cape-prefix-map)
-  :hook
-  ;; Add to the global default value of `completion-at-point-functions'
-  ;; which is used by `completion-at-point'.
-  (completion-at-point-functions . cape-dabbrev)
-  (completion-at-point-functions . cape-file)
-  (completion-at-point-functions . cape-elisp-block))
-
-;;; Search
-;;;; Consult
+;;;; consult
 
 (leaf consult
   :elpaca t
@@ -596,14 +604,14 @@ With universal argument move current window into new tab."
   ;; (setq consult-async-input-debounce 0.02
   ;;       consult-async-input-throttle 0.05
   ;;       consult-async-refresh-delay 0.02)
-  (setopt consult-async-refresh-delay  0.15
-          consult-async-input-throttle 0.2
-          consult-async-input-debounce 0.1
-          consult-fd-args '((if (executable-find "fdfind" 'remote) "fdfind" "fd")
-                            "--color=never"
-                            ;; https://github.com/sharkdp/fd/issues/839
-                            "--full-path --absolute-path"
-                            "--hidden --exclude .git"))
+  (setq consult-async-refresh-delay  0.15
+        consult-async-input-throttle 0.2
+        consult-async-input-debounce 0.1)
+  (setq consult-fd-args '((if (executable-find "fdfind" 'remote) "fdfind" "fd")
+                          "--color=never"
+                          ;; https://github.com/sharkdp/fd/issues/839
+                          "--full-path --absolute-path"
+                          "--hidden --exclude .git"))
 
   ;; Configure the register formatting. This improves the register.
   (setopt register-preview-delay 0.5
@@ -618,8 +626,118 @@ With universal argument move current window into new tab."
    consult--source-bookmark consult--source-file-register
    consult--source-recent-file consult--source-project-recent-file
    ;; :preview-key "M-."
-   :preview-key '(:debounce 0.4 any)))
+   :preview-key '(:debounce 0.4 any))
 
+  ;; (with-eval-after-load 'helix
+  ;;   (dolist (command '(consult-grep
+  ;;                      consult-git-grep
+  ;;                      consult-ripgrep))
+  ;;     (helix-advice-add command :before #'helix-push-point-a)))
+  )
+
+;;;; corfu
+
+(leaf corfu
+  :elpaca t
+  :global-minor-mode global-corfu-mode
+  :custom
+  (corfu-auto . t)
+  (corfu-auto-delay . 0.24)
+  (corfu-auto-prefix . 2)
+  (corfu-cycle . t)
+  (corfu-count . 16)
+  (corfu-max-width . 120)
+  (corfu-quit-at-boundary . 'separator) ;; M-SPC to continue completion.
+  (corfu-quit-no-match . 'separator)
+  ;; When the completion popup is visible, by default the current candidate is
+  ;; previewed into the buffer, and further input commits that candidate as
+  ;; previewed. The feature is in line with other common editors.
+  ;; - t :: non-inserting preview
+  (corfu-preview-current . 'insert)
+  (corfu-preselect . 'prompt)
+  (corfu-on-exact-match . nil) ;; Handling of exact matches
+  (global-corfu-minibuffer . t)
+  (tab-always-indent . 'complete)
+  (tab-first-completion . 'word)
+  ;; Disable Ispell completion function. As an alternative try `cape-dict'.
+  (text-mode-ispell-word-completion . nil)
+  :config
+  ;; (add-to-list 'completion-category-overrides `(lsp-capf (styles ,@completion-styles)))
+
+  (with-eval-after-load 'helix
+    (my-keymap-set corfu-map
+      ;; Expands the common prefix of all candidates, or insert selected one.
+      "C-l" 'corfu-complete
+      "M-l" 'corfu-insert-separator
+      "C-h" 'corfu-info-documentation
+      "C-d" 'corfu-info-location
+      "<tab>"     'corfu-next
+      "<backtab>" 'corfu-previous)))
+
+;; ;; For manual toggling following commands are bound in the `corfu-popupinfo-map':
+;; ;; - `corfu-popupinfo-toggle'
+;; ;; - `corfu-popupinfo-location'
+;; ;; - `corfu-popupinfo-documentation'
+;; (leaf corfu-popupinfo
+;;   :after corfu
+;;   :global-minor-mode corfu-popupinfo-mode
+;;   ;; :custom (corfu-popupinfo-delay . nil)
+;;   :config
+;;   (my-keymap-set corfu-popupinfo-map
+;;     "C-h"      #'corfu-popupinfo-toggle
+;;     ;; Reversed because popupinfo assumes opposite of what feels intuitive
+;;     ;; with evil.
+;;     "C-S-k"    #'corfu-popupinfo-scroll-down
+;;     "C-S-j"    #'corfu-popupinfo-scroll-up
+;;     "C-<up>"   #'corfu-popupinfo-scroll-down
+;;     "C-<down>" #'corfu-popupinfo-scroll-up
+;;     "C-S-p"    #'corfu-popupinfo-scroll-down
+;;     "C-S-n"    #'corfu-popupinfo-scroll-up
+;;     "C-S-u"    (cmd!! #'corfu-popupinfo-scroll-down nil corfu-popupinfo-min-height)
+;;     "C-S-d"    (cmd!! #'corfu-popupinfo-scroll-up nil corfu-popupinfo-min-height))
+;;   )
+
+(leaf corfu-history
+  :hook (corfu-mode-hook . corfu-history-mode)
+  :config
+  (with-eval-after-load 'savehist
+    (add-to-list 'savehist-additional-variables 'corfu-history)))
+
+;; (use-package! corfu-popupinfo
+;;   :hook ((corfu-mode . corfu-popupinfo-mode))
+;;   :config
+;;   (setq corfu-popupinfo-delay '(0.5 . 1.0)))
+
+(leaf nerd-icons-corfu
+  :elpaca t
+  :after corfu
+  :config
+  (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
+
+(defun my-corfu-move-to-minibuffer ()
+  "Move list of candidates to your choice of minibuffer completion UI."
+  (interactive)
+  (pcase completion-in-region--data
+    (`(,beg ,end ,table ,pred ,extras)
+     (let ((completion-extra-properties extras)
+           (completion-cycle-threshold nil)
+           (completion-cycling nil))
+       (consult-completion-in-region beg end table pred)))))
+
+;;;; cape
+
+(leaf cape
+  :elpaca t
+  :commands (cape-dabbrev cape-file cape-elisp-block)
+  ;; :bind ("C-c p" . cape-prefix-map)
+  :hook
+  ;; Add to the global default value of `completion-at-point-functions'
+  ;; which is used by `completion-at-point'.
+  (completion-at-point-functions . cape-dabbrev)
+  (completion-at-point-functions . cape-file)
+  (completion-at-point-functions . cape-elisp-block))
+
+;;; Search
 ;;; IDE
 ;;;; project.el
 
@@ -1414,7 +1532,9 @@ HOOK should be a symbol."
              embark-collect
              embark-bindings
              embark-prefix-help-command)
-  :custom (prefix-help-command . 'embark-prefix-help-command)
+  :custom
+  (which-key-use-C-h-commands . nil)
+  (prefix-help-command . 'embark-prefix-help-command)
   :config
   ;; Hide the modeline of the Embark live/completions buffers.
   (add-to-list 'display-buffer-alist
@@ -1427,6 +1547,10 @@ HOOK should be a symbol."
   ("M-m" . embark-dwim) ;; scroll-down-command
   ("C-v" . embark-act)  ;; scroll-up-command
   ("M-v" . embark-dwim) ;; scroll-down-command
+  (minibuffer-local-map :package emacs
+   ("C-c C-c" . embark-export)
+   ("C-c <C-m>" . embark-collect)
+   ("C-c C-v" . embark-collect))
   (embark-general-map
    ("C-v" . embark-select)
    ("<C-m>" . embark-select)
@@ -1485,6 +1609,10 @@ HOOK should be a symbol."
    ("<tab>" . outline-cycle)
    ("<backtab>" . outline-cycle-buffer))
   :defer-config
+  (define-advice outline-up-heading (:before (&rest args) push-mark)
+    (helix-push-point))
+
+  ;; Keybindings
   (helix-keymap-set outline-minor-mode-map 'normal
     "z <tab>"     'outline-cycle
     "z <backtab>" 'outline-cycle-buffer
