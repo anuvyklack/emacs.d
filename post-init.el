@@ -510,11 +510,7 @@ With universal argument move current window into new tab."
   :config
   (dolist (state '(normal insert))
     (helix-keymap-set vertico-map state
-      "C-h" 'vertico-directory-up
-      ;; "C-h" (lambda ()
-      ;;         (cond ((eq 'file (vertico--metadata-get 'category))
-      ;;                (call-interactively #'vertico-directory-up))))
-      )))
+      "C-h" 'vertico-directory-up)))
 
 (leaf marginalia
   :elpaca t
@@ -529,7 +525,7 @@ With universal argument move current window into new tab."
   :elpaca t
   :hook
   ;; Enable automatic preview at point in the *Completions* buffer.
-  (completion-list-mode . consult-preview-at-point-mode)
+  (completion-list-mode-hook . consult-preview-at-point-mode)
   :bind
   (("C-/" . consult-line)       ;; #'undo
    ("C-?" . consult-line-multi) ;; #'undo-redo
@@ -537,7 +533,7 @@ With universal argument move current window into new tab."
    (("C-c M-x" . consult-mode-command)
     ("C-c <backspace>" . consult-mode-command)
     ("C-c H" . consult-history)
-    ("C-c k" . consult-kmacro)
+    ("C-c K" . consult-kmacro)
     ("C-c M" . consult-man)
     ("C-c I" . consult-info))
    ;; C-x bindings are in `ctl-x-map'
@@ -582,12 +578,12 @@ With universal argument move current window into new tab."
    ;; ("M-y" . consult-yank-pop)
    ([remap repeat-complex-command]        . consult-complex-command)
    ([remap recentf-open]                  . consult-recent-file)
+   ([remap recentf-open-files]            . consult-recent-file)
    ([remap bookmark-jump]                 . consult-bookmark)
    ([remap goto-line]                     . consult-goto-line)
    ([remap imenu]                         . consult-imenu)
    ([remap Info-search]                   . consult-info)
    ([remap load-theme]                    . consult-theme)
-   ([remap recentf-open-files]            . consult-recent-file)
    ([remap switch-to-buffer]              . consult-buffer)
    ([remap switch-to-buffer-other-window] . consult-buffer-other-window)
    ([remap switch-to-buffer-other-frame]  . consult-buffer-other-frame)
@@ -622,20 +618,16 @@ With universal argument move current window into new tab."
   (advice-add 'register-preview :override #'consult-register-window)
 
   (consult-customize
-   consult-theme :preview-key '(:debounce 0.2 any)
    consult-ripgrep consult-git-grep consult-grep
-   consult-bookmark consult-recent-file consult-xref
+   consult-bookmark consult-recent-file
    consult--source-bookmark consult--source-file-register
    consult--source-recent-file consult--source-project-recent-file
    ;; :preview-key "M-."
-   :preview-key '(:debounce 0.4 any))
+   :preview-key '(:debounce 0.2 any))
 
-  ;; (with-eval-after-load 'helix
-  ;;   (dolist (command '(consult-grep
-  ;;                      consult-git-grep
-  ;;                      consult-ripgrep))
-  ;;     (helix-advice-add command :before #'helix-push-point-a)))
-  )
+  (consult-customize
+   consult-theme
+   :preview-key '(:debounce 0.5 any)))
 
 ;;;; corfu
 
@@ -691,10 +683,7 @@ With universal argument move current window into new tab."
   (my-keymap-set corfu-popupinfo-map
     "M-h"   #'corfu-popupinfo-toggle
     "C-S-b" #'corfu-popupinfo-scroll-down
-    "C-S-f" #'corfu-popupinfo-scroll-up
-    ;; "C-S-u"    (cmd!! #'corfu-popupinfo-scroll-down nil corfu-popupinfo-min-height)
-    ;; "C-S-d"    (cmd!! #'corfu-popupinfo-scroll-up nil corfu-popupinfo-min-height))
-    ))
+    "C-S-f" #'corfu-popupinfo-scroll-up))
 
 (leaf nerd-icons-corfu
   :elpaca t
@@ -752,6 +741,15 @@ With universal argument move current window into new tab."
   )
 
 ;;; Search
+;;;; deadgrep
+
+;; https://github.com/Wilfred/deadgrep
+(leaf deadgrep
+  :elpaca t
+  :config
+  ;; (keymap-global-set "<f5>" 'deadgrep)
+  (keymap-set search-map "d" 'deadgrep))
+
 ;;; IDE
 ;;;; project.el
 
@@ -799,37 +797,23 @@ With universal argument move current window into new tab."
 
 (leaf xref
   :elpaca dumb-jump
-  :hook (xref-backend-functions . dumb-jump-xref-activate)
-  :custom ((xref-auto-jump-to-first-definition . 'show)
-           (xref-prompt-for-identifier . nil)
-           (xref-history-storage . #'xref-window-local-history)
-           ;; (xref-show-definitions-function . #'xref-show-definitions-buffer-at-bottom)
-           ;; (xref-show-definitions-function . #'xref-show-definitions-buffer)
-           ;; (xref-show-xrefs-function . #'xref--show-xref-buffer)
-           (xref-show-xrefs-function . #'consult-xref)
-           (xref-show-definitions-function . #'consult-xref))
+  :hook
+  (xref-backend-functions . dumb-jump-xref-activate)
+  (xref-after-update-hook . outli-mode) ;; outline-minor-mode
+  :custom
+  ((xref-auto-jump-to-first-definition . 'show)
+   (xref-prompt-for-identifier . nil)
+   (xref-history-storage . #'xref-window-local-history)
+   ;; (xref-show-definitions-function . #'xref-show-definitions-buffer-at-bottom)
+   ;; (xref-show-definitions-function . #'xref-show-definitions-buffer)
+   ;; (xref-show-xrefs-function . #'xref--show-xref-buffer)
+   (xref-show-xrefs-function . #'consult-xref)
+   (xref-show-definitions-function . #'consult-xref))
   :config
-  (advice-add 'xref-find-definitions :around #'my-xref-try-all-backends)
-  (advice-add 'xref-find-references :around #'my-xref-try-all-backends))
+  (advice-add 'xref-find-definitions :around #'my-xref-try-all-backends-a)
+  (advice-add 'xref-find-references  :around #'my-xref-try-all-backends-a))
 
-;; (defun my-xref-try-all-backends (orig-fun &rest args)
-;;   (let (;; (pnt (point-marker))
-;;         (pnt (point))
-;;         (buffer (current-buffer))
-;;         jumped
-;;         (xref-after-jump-hook (cons (lambda () (setq jumped t))
-;;                                     xref-after-jump-hook)))
-;;     (cl-dolist (backend (my-hook-values 'xref-backend-functions))
-;;       (ignore-error user-error
-;;         (let ((xref-backend-functions (list backend)))
-;;           (apply orig-fun args)))
-;;       (if (and jumped
-;;                (or (not (equal buffer (current-buffer)))
-;;                    (/= pnt (point))))
-;;           (cl-return)
-;;         (setq jumped nil)))))
-
-(defun my-xref-try-all-backends (orig-fun &rest args)
+(defun my-xref-try-all-backends-a (orig-fun &rest args)
   "Try all `xref-backend-functions' in row until first succeed."
   (let* (jumped
          (xref-after-jump-hook (cons (lambda () (setq jumped t))
@@ -1815,7 +1799,7 @@ Replacement for `lisp-outline-level'."
   ;; (ibuffer-deletion-char . "D")
   (ibuffer-eliding-string . "…")
   :hook
-  (ibuffer-mode-hook . ibuffer-auto-mode)    ; automatically update ibuffer
+  (ibuffer-mode-hook . ibuffer-auto-mode) ;; automatically update ibuffer
   (ibuffer-mode-hook . hl-line-mode)
   ;; (ibuffer-hook . (lambda ()
   ;;                   ;; (hl-line-mode +1)
@@ -1825,6 +1809,7 @@ Replacement for `lisp-outline-level'."
   ;; (ibuffer-switch-to-saved-filter-groups "home")
 
   ;; Custom columns
+  ;; --------------
   ;; icons column
   (define-ibuffer-column icon
     (:name "  ")
@@ -1838,10 +1823,11 @@ Replacement for `lisp-outline-level'."
 
   ;; Human readable size column
   (define-ibuffer-column size
-    (:name "Size"
-           :inline t
-           :header-mouse-map ibuffer-size-header-map)
-    (file-size-human-readable (buffer-size))))
+    ( :name "Size"
+      :inline t
+      :header-mouse-map ibuffer-size-header-map)
+    (file-size-human-readable (buffer-size)))
+  )
 
 ;;;;; layout
 
@@ -2102,10 +2088,29 @@ quits any active region before exiting.  When there is no minibuffer
       (call-interactively orig-fun))))
 
 (defun my-clone-indirect-buffer-same-window ()
+  "Create indirect buffer and open it in the current window.
+I write this function because `clone-indirect-buffer' calls `pop-to-buffer'
+ and opens a new window."
   (interactive)
   (-doto (clone-indirect-buffer nil nil)
     (switch-to-buffer)
     (set-buffer)))
+
+(defun my-kill-buffer-and-window ()
+  "Kill the current buffer and delete the current window or tab."
+  (interactive)
+  (let ((parent-win (window-parent)))
+    (kill-buffer (current-buffer))
+    ;; If tabs are enabled and this is the only visible window, then attempt to
+    ;; close this tab.
+    (if (and (bound-and-true-p tab-bar-mode)
+             (null parent-win))
+        (tab-close)
+      ;; else
+      (delete-window)
+      ;; balance-windows raises an error if the parent does not have
+      ;; any further children (then rebalancing is not necessary anyway)
+      (ignore-errors (balance-windows parent-win)))))
 
 ;;; Keybindings
 
@@ -2153,12 +2158,17 @@ quits any active region before exiting.  When there is no minibuffer
     ;; "g /"   'consult-line
     ;; "g ?"   'consult-line-multi
     ;; "g -"   'dired-jump
-    ;; helix-window-map
-    "C-w n" 'other-window-prefix
-    "C-w N" 'other-tab-prefix
-    "C-w b" '("Clone buffer other window" . clone-indirect-buffer-other-window)
-    ;; `clone-indirect-buffer' calls `pop-to-buffer' and opens a new window.
-    "C-w B" '("Clone buffer" . my-clone-indirect-buffer-same-window)))
+    )
+  ;; C-w prefix
+  (my-keymap-set helix-window-map
+    "q" '("Kill buffer and window" . my-kill-buffer-and-window)
+    "N" 'other-tab-prefix
+    "b" '("Clone indirect buffer other window" . clone-indirect-buffer-other-window)
+    "B" '("Clone indirect buffer" . my-clone-indirect-buffer-same-window))
+  ;; Insert state
+  (helix-keymap-global-set 'insert
+    "C-w" 'backward-kill-word ;; together with C-backspace
+    "C-/" 'dabbrev-expand))
 
 ;; (leaf keypad
 ;;   :load-path "~/code/emacs/helix"
@@ -2178,11 +2188,15 @@ quits any active region before exiting.  When there is no minibuffer
 
 ;; `mode-specific-map' keymap corresponds to the `C-c' prefix.
 (my-keymap-set mode-specific-map
+  "RET" 'bookmark-jump
+  "," 'switch-to-buffer
   "'" '("Vertico repeat" . vertico-repeat)
   "\"" '("Select vertico session" . vertico-repeat-select)
   "/" 'consult-ripgrep
-  "?" 'consult-line-multi
   "-" 'dired-jump
+  "d" 'dired-jump
+  ;; "d" 'kill-current-buffer
+  "k" 'kill-current-buffer
   "f" (cons "file/find"
             (define-keymap
               ;; "x" 'xref-find-apropos
@@ -2197,6 +2211,20 @@ quits any active region before exiting.  When there is no minibuffer
               ;; "x" '("Open scratch buffer" . doom/open-scratch-buffer)
               ;; "X" '("Switch to scratch buffer" . doom/switch-to-scratch-buffer)
               ))
+  "b" (cons "buffer"
+            (define-keymap
+              "b" 'ibuffer-jump
+              "i" 'ibuffer-jump
+              "c" '("Clone indirect buffer other window" . clone-indirect-buffer-other-window)
+              "C" '("Clone indirect buffer" . my-clone-indirect-buffer-same-window)
+              "s" 'save-buffer
+              "d" 'kill-current-buffer
+              "k" 'kill-current-buffer
+              "r" 'revert-buffer
+              "R" 'rename-buffer
+              "m" 'bookmark-set
+              "M" 'bookmark-delete
+              "x" 'scratch-buffer))
   "o" `("open" . ,(define-keymap
                     "t" 'treemacs
                     "i" 'imenu-list-smart-toggle))
