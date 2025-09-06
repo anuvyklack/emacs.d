@@ -550,7 +550,7 @@
 (setq dabbrev-upcase-means-case-search t)
 
 (setq dabbrev-ignored-buffer-modes
-      '(archive-mode image-mode docview-mode tags-table-mode pdf-view-mode))
+      '(archive-mode image-mode doc-view-mode tags-table-mode pdf-view-mode))
 
 (setq dabbrev-ignored-buffer-regexps
       '(;; - Buffers starting with a space (internal or temporary buffers)

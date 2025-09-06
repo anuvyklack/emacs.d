@@ -265,7 +265,9 @@ instead.
   ;; Save minibuffer history between sessions.
   (after-init-hook . savehist-mode)
   ;; Save the last location within a file upon reopening.
-  (after-init-hook . save-place-mode))
+  (after-init-hook . save-place-mode)
+  :bind
+  ([remap dabbrev-expand] . hippie-expand))
 
 ;; Keep track of opened files.
 (leaf recentf
@@ -667,35 +669,13 @@ With universal argument move current window into new tab."
   (with-eval-after-load 'helix
     (my-keymap-set corfu-map
       ;; Expands the common prefix of all candidates, or insert selected one.
-      "C-l" 'corfu-complete
-      "M-l" 'corfu-insert-separator
+      "C-l" 'corfu-insert-separator
+      "M-l" 'corfu-complete
+      "C-i" 'corfu-info-documentation
       "C-h" 'corfu-info-documentation
       "C-d" 'corfu-info-location
       "<tab>"     'corfu-next
       "<backtab>" 'corfu-previous)))
-
-;; ;; For manual toggling following commands are bound in the `corfu-popupinfo-map':
-;; ;; - `corfu-popupinfo-toggle'
-;; ;; - `corfu-popupinfo-location'
-;; ;; - `corfu-popupinfo-documentation'
-;; (leaf corfu-popupinfo
-;;   :after corfu
-;;   :global-minor-mode corfu-popupinfo-mode
-;;   ;; :custom (corfu-popupinfo-delay . nil)
-;;   :config
-;;   (my-keymap-set corfu-popupinfo-map
-;;     "C-h"      #'corfu-popupinfo-toggle
-;;     ;; Reversed because popupinfo assumes opposite of what feels intuitive
-;;     ;; with evil.
-;;     "C-S-k"    #'corfu-popupinfo-scroll-down
-;;     "C-S-j"    #'corfu-popupinfo-scroll-up
-;;     "C-<up>"   #'corfu-popupinfo-scroll-down
-;;     "C-<down>" #'corfu-popupinfo-scroll-up
-;;     "C-S-p"    #'corfu-popupinfo-scroll-down
-;;     "C-S-n"    #'corfu-popupinfo-scroll-up
-;;     "C-S-u"    (cmd!! #'corfu-popupinfo-scroll-down nil corfu-popupinfo-min-height)
-;;     "C-S-d"    (cmd!! #'corfu-popupinfo-scroll-up nil corfu-popupinfo-min-height))
-;;   )
 
 (leaf corfu-history
   :hook (corfu-mode-hook . corfu-history-mode)
@@ -703,10 +683,18 @@ With universal argument move current window into new tab."
   (with-eval-after-load 'savehist
     (add-to-list 'savehist-additional-variables 'corfu-history)))
 
-;; (use-package! corfu-popupinfo
-;;   :hook ((corfu-mode . corfu-popupinfo-mode))
-;;   :config
-;;   (setq corfu-popupinfo-delay '(0.5 . 1.0)))
+(leaf corfu-popupinfo
+  :hook (corfu-mode-hook . corfu-popupinfo-mode)
+  :custom (corfu-popupinfo-delay . '(0.5 . 0.5))
+  ;; :custom (corfu-popupinfo-delay . nil)
+  :config
+  (my-keymap-set corfu-popupinfo-map
+    "M-h"   #'corfu-popupinfo-toggle
+    "C-S-b" #'corfu-popupinfo-scroll-down
+    "C-S-f" #'corfu-popupinfo-scroll-up
+    ;; "C-S-u"    (cmd!! #'corfu-popupinfo-scroll-down nil corfu-popupinfo-min-height)
+    ;; "C-S-d"    (cmd!! #'corfu-popupinfo-scroll-up nil corfu-popupinfo-min-height))
+    ))
 
 (leaf nerd-icons-corfu
   :elpaca t
@@ -728,21 +716,46 @@ With universal argument move current window into new tab."
 
 (leaf cape
   :elpaca t
-  :commands (cape-dabbrev cape-file cape-elisp-block)
-  ;; :bind ("C-c p" . cape-prefix-map)
-  :hook
+  :init
+  (with-eval-after-load 'helix
+    (helix-keymap-global-set 'insert
+      ;; Emulate Vim's omni-completion keybinds
+      "C-x" #'cape-prefix-map))
+  :bind
+  (cape-prefix-map
+   ("C-o" . completion-at-point) ;; C-x C-o is Vim's omni-completion keybinding
+   ;; ("C-e" . cape-elisp-block)
+   ;; ("C-s" . cape-elisp-symbol)
+   ("/" . cape-tex)
+   ("C-/" . cape-tex)
+   ("C-h" . cape-history)
+   ("C-l" . cape-line)
+   ("C-k" . cape-keyword)
+   ("C-f" . cape-file)
+   ("C-t" . complete-tag)
+   ("C-w" . cape-dict)
+   ("C-r" . cape-rfc1345)
+   ;; ("s"   . cape-dict)
+   ;; ("C-s" . yasnippet-capf)
+   ("C-a" . cape-abbrev)
+   ("C-d" . cape-dabbrev)
+   ("C-n" . cape-dabbrev)
+   ;; ("C-p" . +corfu/dabbrev-this-buffer)
+   )
+  :config
   ;; Add to the global default value of `completion-at-point-functions'
   ;; which is used by `completion-at-point'.
-  (completion-at-point-functions . cape-dabbrev)
-  (completion-at-point-functions . cape-file)
-  (completion-at-point-functions . cape-elisp-block))
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-elisp-block)
+  (add-hook 'completion-at-point-functions #'cape-history)
+  )
 
 ;;; Search
 ;;; IDE
 ;;;; project.el
 
-(setopt project-vc-extra-root-markers '(".projectile"
-                                        ".project"))
+(setopt project-vc-extra-root-markers '(".projectile" ".project"))
 
 (leaf consult-project-extra
   :elpaca t
