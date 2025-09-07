@@ -1976,10 +1976,12 @@ Replacement for `lisp-outline-level'."
                                    (space-mark ?\  [?·] [?.]))))
 
 ;;; Major-modes
-;;;; Emacs Lisp
+;;;; Emacs Lisp (Elisp)
 
 (leaf elisp-mode
   :after helix
+  :custom
+  (pp-default-function . #'pp-emacs-lisp-code)
   :hook
   (emacs-lisp-mode-hook
    . (lambda ()
@@ -2003,7 +2005,24 @@ Replacement for `lisp-outline-level'."
        (outli-mode 1)
        (helix-paredit-mode 1)))
   (lisp-data-mode-hook . helix-paredit-mode)
+
   :config
+  (helix-keymap-set emacs-lisp-mode-map 'normal
+    "M" '("Documentation" . helpful-at-point)
+    "g q" 'prog-fill-reindent-defun
+    "C-c e" (cons "eval elisp"
+                  (define-keymap
+                    "e" 'pp-eval-last-sexp
+                    ;; "e" 'elisp-eval-region-or-buffer ;; C-c C-e
+                    "r" 'eval-region
+                    "b" 'eval-buffer
+                    "f" 'eval-defun
+                    ;; "m" 'macrostep-expand
+                    "m" 'emacs-lisp-macroexpand
+                    "p" 'pp-macroexpand-last-sexp)))
+  (helix-keymap-set lisp-data-mode-map 'normal
+    "M" '("Documentation" . helpful-at-point))
+
   ;; ;; Treat `-' char as part of the word on 'w', 'e', 'b', motions.
   ;; (modify-syntax-entry ?- "w" emacs-lisp-mode-syntax-table)
   ;; (modify-syntax-entry ?_ "w" emacs-lisp-mode-syntax-table)
@@ -2016,44 +2035,30 @@ Replacement for `lisp-outline-level'."
                      (?m "Macros"    font-lock-function-name-face)
                      ;; (?p "Packages"  font-lock-constant-face)
                      (?v "Variables" font-lock-variable-name-face)
-                     (?t "Types"     font-lock-type-face)))))
+                     (?t "Types"     font-lock-type-face))))))
 
-  (dolist (keymap (list emacs-lisp-mode-map
-                        lisp-data-mode-map))
-    (helix-keymap-set keymap 'normal
-      ;; "C-c k" '("Documentation" . helpful-at-point)
-      "M" '("Documentation" . helpful-at-point))))
-
-;; ;; Extra faces definded by `lisp-extra-font-lock' package:
-;; ;; - `lisp-extra-font-lock-backquote'
-;; (leaf lisp-extra-font-lock
-;;   :elpaca t
-;;   :require t
-;;   :config
-;;   :global-minor-mode lisp-extra-font-lock-global-mode)
-
-;; `highlight-defined-builtin-function-name-face'
-(leaf highlight-defined
+(leaf elisp-demos
   :elpaca t
-  :custom (highlight-defined-face-use-itself . nil)
-  :hook ((help-mode-hook . highlight-defined-mode)
-         (emacs-lisp-mode-hook . highlight-defined-mode)))
+  :init
+  (advice-add 'describe-function-1 :after #'elisp-demos-advice-describe-function-1)
+  (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
 
-;; ;; Highlight quoted symbols
-;; (leaf highlight-quoted
-;;   :elpaca t
-;;   :hook (emacs-lisp-mode-hook . highlight-quoted-mode))
+;;;;; xref integration for Elisp
 
 (leaf elisp-def
   :elpaca t
   :after helix
-  :hook (emacs-lisp-mode-hook
-         . (lambda ()
-             (remove-hook 'xref-backend-functions #'elisp--xref-backend :local)))
+  :hook
+  (emacs-lisp-mode-hook
+   . (lambda ()
+       (remove-hook 'xref-backend-functions #'elisp--xref-backend :local)))
   :init
   (helix-keymap-set emacs-lisp-mode-map 'normal
     "g d" '("Find definition" . my-elisp-find-definitions)
-    "C-w g d" '("Find definition other window" . my-elisp-find-definitions-other-window)))
+    "C-w g d" '("Find definition other window" . my-elisp-find-definitions-other-window))
+
+  (helix-advice-add 'my-elisp-find-definitions :around #'helix-jump-command)
+  (helix-advice-add 'my-elisp-find-definitions-other-window :around #'helix-jump-command))
 
 (defun my-elisp-find-definitions ()
   "Try `elisp-def', on fail try other xref backends."
@@ -2067,11 +2072,27 @@ Replacement for `lisp-outline-level'."
   (other-window-prefix)
   (my-elisp-find-definitions))
 
-(leaf elisp-demos
+;;;;; Extra highlighting
+
+;; `highlight-defined-builtin-function-name-face'
+(leaf highlight-defined
   :elpaca t
-  :init
-  (advice-add 'describe-function-1 :after #'elisp-demos-advice-describe-function-1)
-  (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
+  :custom (highlight-defined-face-use-itself . nil)
+  :hook ((help-mode-hook . highlight-defined-mode)
+         (emacs-lisp-mode-hook . highlight-defined-mode)))
+
+;; ;; Extra faces definded by `lisp-extra-font-lock' package:
+;; ;; - `lisp-extra-font-lock-backquote'
+;; (leaf lisp-extra-font-lock
+;;   :elpaca t
+;;   :require t
+;;   :config
+;;   :global-minor-mode lisp-extra-font-lock-global-mode)
+
+;; ;; Highlight quoted symbols
+;; (leaf highlight-quoted
+;;   :elpaca t
+;;   :hook (emacs-lisp-mode-hook . highlight-quoted-mode))
 
 ;;; My commands
 
