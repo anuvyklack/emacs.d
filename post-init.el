@@ -1450,7 +1450,7 @@ HOOK should be a symbol."
   (setq org-bookmarks-file (file-name-concat org-directory "bookmarks.org")
         org-bookmarks-add-org-capture-template t
         org-bookmarks-display-screenshot t)
-  (org-bookmarks-add-org-capture-template))
+  (org-bookmarks-add-to-org-capture-templates))
 
 ;;;; org-journal
 
@@ -1496,6 +1496,14 @@ HOOK should be a symbol."
                                      )))
 
 ;;; Extra facilities
+;;;; elpaca
+
+(leaf elpaca
+  :after helix
+  :config
+  (helix-set-initial-state 'elpaca-info-mode 'normal)
+  (keymap-set elpaca-ui-mode-map "/" #'elpaca-ui-search))
+
 ;;;; which-key
 
 (leaf which-key
@@ -1699,6 +1707,7 @@ Replacement for `lisp-outline-level'."
 
 (leaf dired
   :after helix
+  :commands (dired dired-jump)
   :custom
   ;; -l               :: use a long listing format
   ;; -a, --all        :: do not ignore entries starting with `.'
@@ -1719,25 +1728,236 @@ Replacement for `lisp-outline-level'."
   (dired-maybe-use-globstar . t)
   :hook
   (dired-mode-hook . dired-hide-details-mode)
-  (dired-mode-hook . hl-line-mode)
-  :config
-  (helix-keymap-set dired-mode-map 'motion
-    "h" 'dired-up-directory
-    "j" 'dired-next-line
-    "k" 'dired-previous-line
-    "l" 'dired-find-file
-    ;; "l" 'dired-open-file ;; from `dired-hacks' package
-    "/" 'dired-goto-file
-    "K" 'dired-do-kill-lines
-    "r" 'dired-do-redisplay
-    "?" 'casual-dired-tmenu
-    ))
+  (dired-mode-hook . hl-line-mode))
 
 (leaf dired-x
   :custom (dired-omit-files . "\\`[.]?#\\|\\`[.][.]?\\'\\|\\`[.].+")
   :hook (dired-mode-hook . dired-omit-mode))
 
-(leaf diredc :elpaca t)
+(leaf diredfl
+  :elpaca t
+  :after dired
+  :hook (dired-mode-hook . diredfl-mode))
+
+(leaf dired-narrow  :elpaca t :after dired)
+(leaf dired-subtree :elpaca t :after dired)
+
+(leaf dired-copy-paste
+  :elpaca (dired-copy-paste :host github :repo "jsilve24/dired-copy-paste")
+  :after dired
+  :commands (dired-copy-paste-do-copy
+             dired-copy-paste-do-cut
+             dired-copy-paste-do-paste))
+
+(leaf dired-du
+  :elpaca t
+  :commands dired-du-mode
+  :custom (dired-du-size-format . t))
+
+(leaf wdired
+  :custom (wdired-allow-to-change-permissions . t)) ; or 'advanced
+
+;;;;; dired filter
+
+(leaf dired-filter
+  :elpaca t
+  :config
+  (setopt dired-filter-group-saved-groups
+          '(("default"
+             ("Directories"
+              (directory))
+             ("Archives"
+              (extension "zip" "rar" "gz" "bz2" "tar"))
+             ("Pictures"
+              (or (extension "jfif" "JPG")
+                  (mode . 'image-mode)))
+             ("Videos"
+              (extension "mp4" "mkv" "flv" "mpg" "avi" "webm"))
+             ;; ("LaTeX"
+             ;;  (extension "tex" "bib"))
+             ;; ("Org"
+             ;;  (extension . "org"))
+             ("PDF"
+              (extension . "pdf"))))))
+
+(defun my-dired-filter-group-mode ()
+  "Toggle `dired-filter-group-mode' in all buffers."
+  (interactive)
+  (if dired-filter-group-mode
+      (progn
+        (dired-filter-group-mode -1)
+        (remove-hook 'dired-mode-hook #'dired-filter-group-mode))
+    (dired-filter-group-mode +1)
+    (add-hook 'dired-mode-hook #'dired-filter-group-mode)))
+
+;;;;; diredc — Midnight Commander
+
+(leaf diredc
+  :elpaca t
+  ;; :require t
+  )
+
+;;;;; dired keybindings
+
+(with-eval-after-load 'dired
+  (my-keymap-set dired-mode-map
+    "h" 'dired-up-directory
+    "j" 'dired-next-line
+    "k" 'dired-previous-line
+    "l" 'dired-find-file
+    ;; "l" 'dired-open-file ;; from `dired-hacks' package
+
+    "/" 'dired-goto-file
+    "i" 'dired-toggle-read-only
+    "K" 'dired-do-kill-lines
+    "r" 'dired-do-redisplay
+    "?" 'casual-dired-tmenu
+
+    "!" 'dired-do-shell-command
+    "&" 'dired-do-async-shell-command
+
+    "C-c u" 'dired-undo
+    ;; "C-c a" 'org-attach-dired-to-subtree
+
+    "s" 'dired-sort-toggle-or-edit
+    "S" 'casual-dired-sort-by-tmenu
+
+    "o" 'dired-do-open
+    "RET" 'dired-do-open
+    "C-w <return>" 'dired-find-file-other-window
+    "w"   'dired-display-file
+
+    "("   'dired-hide-details-mode
+    "z d" 'dired-hide-details-mode
+    "z i" 'dired-hide-details-mode
+
+    ")"   'my-dired-toggle-omit-mode
+    "z ." 'my-dired-toggle-omit-mode
+
+    "<" 'dired-prev-marked-file
+    ">" 'dired-next-marked-file
+
+    "p" 'dired-copy-paste-do-paste
+    "y" (cons "yank"
+              (define-keymap
+                "y" 'dired-copy-paste-do-copy
+                "d" 'dired-copy-paste-do-cut
+                "n" 'my-dired-copy-file-name
+                "p" 'my-dired-copy-file-path
+                "c" 'dired-do-copy
+                "l" 'dired-do-symlink
+                "L" 'dired-do-relsymlink
+                "h" 'dired-do-hardlink
+                "x" 'dired-do-shell-command
+                "X" 'dired-do-async-shell-command))
+    "f" (define-keymap
+          "RET" 'dired-do-open
+          "o" 'dired-do-open
+          "d" 'dired-do-delete
+          "c" 'dired-do-compress-to
+          "z" 'dired-do-compress
+          "x" 'dired-do-shell-command
+          "X" 'dired-do-async-shell-command)
+    "g" (define-keymap
+          "RET" 'dired-do-open
+          "o" 'dired-find-file-other-window
+          "O" 'dired-view-file
+          "x" 'browse-url-of-dired-file
+
+          "d" 'dired-do-delete
+          "c" 'dired-do-compress-to
+          "z" 'dired-do-compress
+          "l" 'dired-do-load
+
+          "u" 'dired-upcase
+          "U" 'dired-downcase
+          "A" 'dired-show-file-type
+
+          "r" 'dired-do-find-regexp
+          "b" 'dired-do-byte-compile
+          "i" 'dired-do-info
+          "m" 'dired-do-man)
+    "c" (cons "change"
+              (define-keymap
+                "d" 'my-dired-add-denote-id
+                "n" 'dired-do-rename
+                "r" 'dired-do-rename
+                "g" 'dired-do-chgrp
+                "o" 'dired-do-chown
+                "m" 'dired-do-chmod
+                "t" 'dired-do-touch
+                ;; "c" 'dired-do-compress-to
+                ;; "z" 'dired-do-compress
+                ;; "r" 'dired-do-find-regexp-and-replace
+                "/" 'dired-do-find-regexp-and-replace
+                "x" 'dired-do-shell-command
+                "X" 'dired-do-async-shell-command))
+
+    "I" 'dired-maybe-insert-subdir
+
+    ;; Commands for marking and unmarking.
+    "m" 'dired-mark
+    "U" 'dired-unmark-all-marks
+    "*" (cons "mark"
+              (define-keymap
+                "%"   'dired-mark-subdir-files ;; mark all
+                "."   'dired-mark-extension
+                "*"   'dired-mark-executables
+                "d"   'dired-mark-directories
+                "l"   'dired-mark-symlinks
+                "h"   'dired-mark-omitted ;; mark hidden files
+                ";"   'dired-mark-sexp
+                "u"   'dired-unmark-all-files
+                "n"   'dired-number-of-marked-files
+                "c"   'dired-change-marks
+                "DEL" 'dired-unmark-backward
+
+                "~"   'dired-toggle-marks
+                "t"   'dired-toggle-marks
+
+                ;; mark files by regexp
+                "/"   'dired-mark-files-regexp
+                "f"   'dired-mark-files-regexp
+                "m"   'dired-mark-files-regexp
+                "r"   'dired-mark-files-regexp))
+    ;; All regexp commands share a `%' prefix
+    "%" (cons "regexp commands"
+              (define-keymap
+                "/" 'dired-mark-files-regexp
+                "f" 'dired-mark-files-regexp
+                "m" 'dired-mark-files-regexp
+
+                "F" 'dired-mark-files-containing-regexp
+                "d" 'dired-flag-files-regexp
+
+                "g" 'dired-flag-garbage-files
+                "&" 'dired-flag-garbage-files
+
+                "r" 'dired-do-rename-regexp
+                "c" 'dired-do-copy-regexp
+                "l" 'dired-do-symlink-regexp
+                "L" 'dired-do-relsymlink-regexp
+                "h" 'dired-do-hardlink-regexp))
+    ;; dired narrow
+    "n"   'dired-narrow-fuzzy
+    "N"   'dired-narrow-regexp
+    "z n" 'dired-narrow-fuzzy
+    "z N" 'dired-narrow-regexp
+    ;; dired-subtree
+    "<tab>"     'dired-subtree-toggle
+    "<backtab>" 'dired-subtree-cycle
+    "z j" 'dired-subtree-down
+    "z k" 'dired-subtree-up
+    "z u" 'dired-subtree-up
+    "C-j" 'dired-subtree-next-sibling
+    "C-k" 'dired-subtree-previous-sibling))
+
+;; (with-eval-after-load 'wdired
+;;   (helix-keymap-set wdired-mode-map 'normal
+;;     ;; "("   'dired-hide-details-mode
+;;     ;; "RET" 'my-wdired-toggle-bit
+;;     ;; "ESC" 'wdired-exit
+;;     ))
 
 ;;;;; My dired commands
 
@@ -1768,20 +1988,83 @@ Replacement for `lisp-outline-level'."
     (dired-omit-mode +1)
     (add-hook 'dired-mode-hook #'dired-omit-mode)))
 
+;;;;; denote-dired
+
+(defconst denote-id-format "%Y%m%dT%H%M%S")
+(defconst denote-id-regexp "\\([0-9]\\{8\\}\\)\\(T[0-9]\\{6\\}\\)")
+
+(defun my-dired-add-denote-id ()
+  "Add denote timestamp in front of the files name, unless it's already there."
+  (declare (interactive-only t))
+  (interactive nil dired-mode)
+  (dolist (file (dired-get-marked-files))
+    (unless (my-get-file-denote-id file)
+      (let ((filename (file-name-nondirectory file)))
+        (cond
+         ;; Files from Reddit app on android. They have timestamp in their name,
+         ;; like this: RDT_20220820_0858002573777192519160821.jpg
+         ((string-match "^RDT_\\([0-9]\\{8\\}\\)_\\([0-9]\\{6\\}\\)" filename)
+          (let* ((date (match-string-no-properties 1 filename))
+                 (time (match-string-no-properties 2 filename))
+                 (extension (file-name-extension file))
+                 (newname (format "%sT%s.%s" date time extension)))
+            (rename-file file newname)))
+         (t
+          (let* ((id (my-create-file-denote-id file))
+                 (newname (format "%s--%s" id filename)))
+            (rename-file file newname)))))))
+  (dired-revert))
+
+(defun my-get-file-creation-time (filepath)
+  "Get the creation time of FILEPATH using the `stat' from coreutils."
+  (-> (format "stat --format=%%w %s" (shell-quote-argument filepath))
+      (shell-command-to-string)
+      (string-trim)
+      (parse-time-string)
+      (encode-time)))
+
+(defun my-get-file-modification-time (filepath)
+  (file-attribute-modification-time (file-attributes filepath)))
+
+(defun my-get-file-denote-id (filepath)
+  "Get file denote ID or `nil'"
+  (let ((filename (file-name-nondirectory filepath)))
+    (if (string-match (concat "\\`" denote-id-regexp) filename)
+        (match-string-no-properties 0 filename))))
+
+(defun my-create-file-denote-id (filepath)
+  "Generate denote ID based on file creation time"
+  (let* ((created (my-get-file-creation-time filepath))
+         (modified (file-attribute-modification-time (file-attributes filepath)))
+         (time (if (time-less-p created modified)
+                   created modified)))
+    (format-time-string denote-id-format time)))
+
 ;;;;; image-dired
-
-;; Use Thumbnail Managing Standard
-(setq image-dired-thumbnail-storage 'standard)  ; 128x128
-;; (setq image-dired-thumbnail-storage 'standard-large)  ; 256x256
-;; (setq image-dired-thumbnail-storage 'standard-x-large) ; 512x512
-
-(setq image-dired-marking-shows-next nil)
-
-;; TODO: xdg-open doesn't worked
-(setq image-dired-external-viewer "qimgv")
 
 ;; image-dired-dired-display-image
 ;; dired-open-file
+(leaf image-dired
+  :after dired
+  :custom
+  ;; TODO: xdg-open doesn't worked
+  (image-dired-external-viewer . "qimgv")
+  (image-dired-marking-shows-next . nil)
+
+  ;; Use Thumbnail Managing Standard
+  (image-dired-thumbnail-storage . 'standard)  ; 128x128
+  ;; (image-dired-thumbnail-storage . 'standard-large)  ; 256x256
+  ;; (image-dired-thumbnail-storage . 'standard-x-large) ; 512x512
+  :bind
+  (image-dired-thumbnail-mode-map
+   ("RET" . image-dired-display-this)
+   ("o" . image-dired-thumbnail-display-external)
+   ("m" . image-dired-mark-thumb-original-file)
+   ("u" . image-dired-unmark-thumb-original-file)
+   ("d" . image-dired-flag-thumb-original-file)
+   ("K" . image-dired-delete-char)
+   ("n" . image-dired-display-next)
+   ("p" . image-dired-display-previous)))
 
 ;;;; ibuffer
 
@@ -1791,6 +2074,9 @@ Replacement for `lisp-outline-level'."
   (ibuffer-truncate-lines . t)
   (ibuffer-show-empty-filter-groups . nil) ; Don't show emtpy filter groups
   (ibuffer-display-summary . nil)
+  (ibuffer-movement-cycle . nil)
+  (ibuffer-old-time . 2) ;; hours
+  (ibuffer-directory-abbrev-alist . `((,abbreviated-home-dir . "~/")))
   ;; (ibuffer-default-sorting-mode . 'filename/process) ; recency alphabetic major-mode
   ;; (ibuffer-read-only-char . "%")
   ;; (ibuffer-modified-char . "*")
@@ -1801,21 +2087,43 @@ Replacement for `lisp-outline-level'."
   :hook
   (ibuffer-mode-hook . ibuffer-auto-mode) ;; automatically update ibuffer
   (ibuffer-mode-hook . hl-line-mode)
-  ;; (ibuffer-hook . (lambda ()
-  ;;                   ;; (hl-line-mode +1)
-  ;;                   (unless hl-line-mode (hl-line-mode +1))))
   :config
   (cl-pushnew #'helpful-mode ibuffer-help-buffer-modes)
   ;; (ibuffer-switch-to-saved-filter-groups "home")
+  )
 
-  ;; Custom columns
-  ;; --------------
-  ;; icons column
+;;;;; ibuffer appearance
+
+(with-eval-after-load 'ibuffer
+  (setq ibuffer-formats
+        (let ((path (cond ((require 'ibuffer-vc nil t)
+                           'my-vc-root-relative-filename-or-process)
+                          ((require 'ibuffer-projectile nil t)
+                           'my-project-relative-filename-or-process)
+                          (t 'filename-and-process))))
+          (list `( mark modified read-only locked
+                   " " (icon 2 2 :left :elide)
+                   ,(propertize " " 'display `(space :align-to 8))
+                   (name 26 -1)
+                   "  " ,path)
+                `( mark modified read-only locked
+                   " " (icon 2 2 :left :elide)
+                   ,(propertize " " 'display `(space :align-to 8))
+                   (name 30 30 :left :elide)
+                   " " (size 6 -1 :right)
+                   " " (mode 16 16 :left :elide)
+                   ;; ,@(when (require 'ibuffer-vc nil t)
+                   ;;     '(" " (vc-status 12 :left)))
+                   " " ,path))))
+
+  ;; Custom columns:
+  ;; ---------------
+
+  ;; Icons column
   (define-ibuffer-column icon
-    (:name "  ")
+    ( :name "  ")
     (let ((icon (if (and (buffer-file-name) (nerd-icons-auto-mode-match?))
-                    (nerd-icons-icon-for-file (file-name-nondirectory (buffer-file-name))
-                                              :v-adjust -0.05)
+                    (nerd-icons-icon-for-file (file-name-nondirectory (buffer-file-name)) :v-adjust -0.05)
                   (nerd-icons-icon-for-mode major-mode :v-adjust -0.05))))
       (if (symbolp icon)
           (setq icon (nerd-icons-faicon "nf-fa-file_o" :face 'nerd-icons-dsilver :height 0.8 :v-adjust 0.0))
@@ -1826,85 +2134,102 @@ Replacement for `lisp-outline-level'."
     ( :name "Size"
       :inline t
       :header-mouse-map ibuffer-size-header-map)
-    (file-size-human-readable (buffer-size)))
-  )
+    (file-size-human-readable (buffer-size))))
 
-;;;;; layout
+;;;;; ibuffer keybindings
 
-(let ((path (if (require 'ibuffer-projectile nil t)
-                'my/project-relative-filename-or-process
-              'filename-and-process)))
-  (setq ibuffer-formats
-        `((mark modified read-only locked
-           " " (icon 2 2 :left :elide)
-           ,(propertize " " 'display `(space :align-to 8))
-           (name 26 -1)
-           "  " ,path)
-          (mark modified read-only locked
-                " " (icon 2 2 :left :elide)
-                ,(propertize " " 'display `(space :align-to 8))
-                (name 30 30 :left :elide)
-                " " (size 6 -1 :right)
-                " " (mode 16 16 :left :elide)
-                ;; ,@(when (require 'ibuffer-vc nil t)
-                ;;     '(" " (vc-status 12 :left)))
-                " " ,path))))
+(with-eval-after-load 'ibuffer
+  (my-keymap-set ibuffer-mode-map
+    "C-c f f" 'ibuffer-find-file
+
+    ;; Inherit hjkl keys from `special-mode-map'
+    "h"   nil
+    "j"   nil ;; ibuffer-jump-to-buffer
+    "k"   nil ;; ibuffer-do-kill-lines
+    "l"   nil ;; ibuffer-redisplay
+
+    ">"   'ibuffer-forward-next-marked
+    "<"   'ibuffer-backwards-next-marked
+
+    "d"   'ibuffer-mark-for-delete
+    "M-d" 'ibuffer-mark-for-delete-backwards
+    "x"   'ibuffer-do-kill-on-deletion-marks
+
+    "K"   'ibuffer-do-kill-lines
+    "f"   `("filter" . ,ibuffer--filter-map)
+    "/"   'ibuffer-jump-to-buffer ;; ibuffer--filter-map
+
+    "g"    nil ;; ibuffer-update
+    "g r" 'ibuffer-update ;; just use C-c b r
+    "g R" 'ibuffer-redisplay
+
+    "g j" 'ibuffer-forward-line
+    "g k" 'ibuffer-backward-line
+
+    "X"   'ibuffer-bury-buffer
+    "R"   'ibuffer-do-replace-regexp
+    ;; "A"   #'ibuffer-do-view-horizontally
+
+    "v"     'ibuffer-do-view-horizontally
+    "C-x v" 'ibuffer-do-view
+
+    ;; Filter groups
+    "TAB" 'ibuffer-toggle-filter-group
+    "z f" 'ibuffer-jump-to-filter-group
+    "C-j" 'ibuffer-forward-filter-group
+    "C-k" 'ibuffer-backward-filter-group
+    "] ]" 'ibuffer-forward-filter-group
+    "[ [" 'ibuffer-backward-filter-group
+    "z j" 'ibuffer-forward-filter-group
+    "z k" 'ibuffer-backward-filter-group
+    "z u" 'ibuffer-backward-filter-group)
+
+  (my-keymap-set ibuffer--filter-map
+    "y" 'ibuffer-yank
+    "q" 'ibuffer-filter-disable
+    "Q" 'ibuffer-clear-filter-groups))
 
 ;;;;; ibuffer-vc
 
-;; (leaf ibuffer-vc
-;;   :elpaca t
-;;   :hook (ibuffer-hook . (lambda ()
-;;                           (ibuffer-vc-set-filter-groups-by-vc-root)
-;;                           (unless (eq ibuffer-sorting-mode 'alphabetic)
-;;                             (ibuffer-do-sort-by-alphabetic))))
-;;   ;; :congig
-;;   ;; ibuffer-vc-generate-filter-groups-by-vc-root
-;;   )
-;; 
-;; ;; (setq ibuffer-filter-groups)
-;; 
-;; (defun my-ibuffer-vc-root (buf)
-;;   "Return a cons cell (backend-name . root-dir) for BUF.
-;; If the file is not under version control, nil is returned instead."
-;;   (when-let* ((file-name (funcall ibuffer-vc-buffer-file-name-function buf))
-;;               ((ibuffer-vc--include-file-p file-name))
-;;               (backend (ibuffer-vc--deduce-backend file-name)))
-;;     (let* ((root-fn-name (intern (format "vc-%s-root" (downcase (symbol-name backend)))))
-;;            (root-dir (if (fboundp root-fn-name) ;; git, svn, hg, bzr (at least)
-;;                          (funcall root-fn-name file-name)
-;;                        (pcase backend
-;;                          ((and (or 'darcs 'DARCS)
-;;                                ;; `vc-darcs' is an external package
-;;                                (guard (fboundp 'vc-darcs-find-root)))
-;;                           (vc-darcs-find-root file-name))
-;;                          ((or 'cvs 'CVS) (vc-find-root file-name "CVS"))
-;;                          ((or 'rcs 'RCS) (or (vc-find-root file-name "RCS")
-;;                                              (concat file-name ",v")))
-;;                          ((or 'sccs 'SCCS) (or (vc-find-root file-name "SCCS")
-;;                                                (concat "s." file-name)))
-;;                          ((or 'src 'SRC) (or (vc-find-root file-name ".src")
-;;                                              (concat file-name ",v")))
-;;                          (_ (error "ibuffer-vc: unknown vc backend '%s'" backend))))))
-;;       (cons backend root-dir))))
-;; 
-;; (defun my-ibuffer-generate-filter-groups ()
-;;   "Set Ibuffer filter groups."
-;;   (->> (buffer-list)
-;;        (mapcar #'my-ibuffer-vc-root)
-;;        (delq nil)
-;;        (-uniq)
-;;        (mapcar #'(lambda (vc-root)
-;;                    (list (format "%s: %s" (car vc-root) (cdr vc-root))
-;;                          `(vc-root . ,vc-root))))))
-;; 
-;; (defun my-ibuffer-set-filter-groups ()
-;;   "Set Ibuffer filter groups."
-;;   (setq ibuffer-filter-groups (ibuffer-vc-generate-filter-groups-by-vc-root))
-;;   (when-let ((ibuf (get-buffer "*Ibuffer*")))
-;;     (with-current-buffer ibuf
-;;       (pop-to-buffer ibuf)
-;;       (ibuffer-update nil t))))
+(leaf ibuffer-vc
+  ;; :elpaca t
+  :elpaca (ibuffer-vc :repo "~/.config/emacs/modules")
+  :hook
+  (ibuffer-hook . (lambda ()
+                    (ibuffer-vc-set-filter-groups-by-vc-root)
+                    (unless (eq ibuffer-sorting-mode 'alphabetic)
+                      (ibuffer-do-sort-by-alphabetic))))
+  :config
+  ;; Render filenames relative to project root
+  (define-ibuffer-column my-vc-root-relative-filename-or-process
+    ( :name "Filename/Process"
+      :header-mouse-map ibuffer-filename/process-header-map
+      :summarizer (lambda (strings)
+                    (setq strings (delete "" strings))
+                    (let ((procs (--count (get-text-property 1 'ibuffer-process it)
+                                          strings))
+                          (files (length strings)))
+                      (concat (pcase files
+                                (0 "No files")
+                                (1 "1 file")
+                                (_ (format "%d files" files)))
+                              ", "
+                              (pcase files
+                                (0 "no processes")
+                                (1 "1 process")
+                                (_ (format "%d processes" procs)))))))
+    (let ((filename (ibuffer-make-column-filename buffer mark))
+          proc root-dir)
+      (cond ((setq proc (get-buffer-process buffer))
+             (concat (propertize (format "(%s %s)" proc (process-status proc))
+                                 'font-lock-face 'italic
+                                 'ibuffer-process proc)
+                     (if (length> filename 0)
+                         (format " %s" filename)
+                       "")))
+            ((setq root-dir (cdr (ibuffer-vc-root buffer)))
+             (file-relative-name filename root-dir))
+            (t (abbreviate-file-name filename))))))
 
 ;;;;; ibuffer-projectile
 
@@ -1927,24 +2252,24 @@ Replacement for `lisp-outline-level'."
 ;;                                            :v-adjust -0.05)
 ;;                                           " "))
 ;;   ;; Render filnames relative to project root
-;;   (define-ibuffer-column my/project-relative-filename-or-process
-;;     (:name "Filename/Process"
-;;      :header-mouse-map ibuffer-filename/process-header-map
-;;      :summarizer
-;;      (lambda (strings)
-;;        (setq strings (delete "" strings))
-;;        (let ((procs (--count (get-text-property 1 'ibuffer-process it)
-;;                              strings))
-;;              (files (length strings)))
-;;          (concat (pcase files
-;;                    (0 "No files")
-;;                    (1 "1 file")
-;;                    (_ (format "%d files" files)))
-;;                  ", "
-;;                  (pcase files
-;;                    (0 "no processes")
-;;                    (1 "1 process")
-;;                    (_ (format "%d processes" procs)))))))
+;;   (define-ibuffer-column my-project-relative-filename-or-process
+;;     ( :name "Filename/Process"
+;;       :header-mouse-map ibuffer-filename/process-header-map
+;;       :summarizer
+;;       (lambda (strings)
+;;         (setq strings (delete "" strings))
+;;         (let ((procs (--count (get-text-property 1 'ibuffer-process it)
+;;                               strings))
+;;               (files (length strings)))
+;;           (concat (pcase files
+;;                     (0 "No files")
+;;                     (1 "1 file")
+;;                     (_ (format "%d files" files)))
+;;                   ", "
+;;                   (pcase files
+;;                     (0 "no processes")
+;;                     (1 "1 process")
+;;                     (_ (format "%d processes" procs)))))))
 ;;     (let ((filename (ibuffer-make-column-filename buffer mark)))
 ;;       (if-let* ((proc (get-buffer-process buffer)))
 ;;           (concat (propertize (format "(%s %s)" proc (process-status proc))
@@ -1963,7 +2288,7 @@ Replacement for `lisp-outline-level'."
 (setopt tramp-default-method "ssh") ;; faster than the default "scp"
 
 
-;;;; Visualize whitespace
+;;;; visualize whitespaces
 
 ;; Enable with `whitespace-mode'
 (leaf whitespace
@@ -1976,12 +2301,26 @@ Replacement for `lisp-outline-level'."
                                    (space-mark ?\  [?·] [?.]))))
 
 ;;; Major-modes
+;;;; Special mode
+
+;; (with-eval-after-load 'helix
+;;   (helix-keymap-set special-mode-map 'motion
+;;     "g g" 'beginning-of-buffer
+;;     "G"   'end-of-buffer))
+
+(my-keymap-set special-mode-map
+  "g" nil ;; revert-buffer
+  "<" nil ;; beginning-of-buffer
+  ">" nil ;; end-of-buffer
+  "g g" 'beginning-of-buffer
+  "G"   'end-of-buffer)
+
 ;;;; Emacs Lisp (Elisp)
 
 (leaf elisp-mode
   :after helix
-  :custom
-  (pp-default-function . #'pp-emacs-lisp-code)
+  ;; :custom
+  ;; (pp-default-function . #'pp-emacs-lisp-code)
   :hook
   (emacs-lisp-mode-hook
    . (lambda ()
@@ -2009,7 +2348,8 @@ Replacement for `lisp-outline-level'."
   :config
   (helix-keymap-set emacs-lisp-mode-map 'normal
     "M" '("Documentation" . helpful-at-point)
-    "g q" 'prog-fill-reindent-defun
+    "g q" 'prog-fill-reindent-defun)
+  (my-keymap-set emacs-lisp-mode-map
     "C-c e" (cons "eval elisp"
                   (define-keymap
                     "e" 'pp-eval-last-sexp
@@ -2108,31 +2448,6 @@ quits any active region before exiting.  When there is no minibuffer
                 executing-kbd-macro)
       (call-interactively orig-fun))))
 
-(defun my-clone-indirect-buffer-same-window ()
-  "Create indirect buffer and open it in the current window.
-I write this function because `clone-indirect-buffer' calls `pop-to-buffer'
- and opens a new window."
-  (interactive)
-  (-doto (clone-indirect-buffer nil nil)
-    (switch-to-buffer)
-    (set-buffer)))
-
-(defun my-kill-buffer-and-window ()
-  "Kill the current buffer and delete the current window or tab."
-  (interactive)
-  (let ((parent-win (window-parent)))
-    (kill-buffer (current-buffer))
-    ;; If tabs are enabled and this is the only visible window, then attempt to
-    ;; close this tab.
-    (if (and (bound-and-true-p tab-bar-mode)
-             (null parent-win))
-        (tab-close)
-      ;; else
-      (delete-window)
-      ;; balance-windows raises an error if the parent does not have
-      ;; any further children (then rebalancing is not necessary anyway)
-      (ignore-errors (balance-windows parent-win)))))
-
 ;;; Keybindings
 
 ;; Rebind `universal-argument' from `C-u' to `M-u'.
@@ -2182,10 +2497,11 @@ I write this function because `clone-indirect-buffer' calls `pop-to-buffer'
     )
   ;; C-w prefix
   (my-keymap-set helix-window-map
-    "q" '("Kill buffer and window" . my-kill-buffer-and-window)
     "N" 'other-tab-prefix
-    "b" '("Clone indirect buffer other window" . clone-indirect-buffer-other-window)
-    "B" '("Clone indirect buffer" . my-clone-indirect-buffer-same-window))
+    ;; "q" '("Kill buffer and window" . my-kill-buffer-and-window)
+    ;; "b" '("Clone indirect buffer other window" . clone-indirect-buffer-other-window)
+    ;; "B" '("Clone indirect buffer" . my-clone-indirect-buffer-same-window)
+    )
   ;; Insert state
   (helix-keymap-global-set 'insert
     "C-w" 'backward-kill-word ;; together with C-backspace

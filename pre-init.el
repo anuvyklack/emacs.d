@@ -79,6 +79,7 @@
 (elpaca `(,@elpaca-order))
 
 ;;; Load `custom.el'
+
 (add-hook 'elpaca-after-init-hook
           #'(lambda ()
               (when (file-exists-p custom-file)
