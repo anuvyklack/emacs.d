@@ -18,10 +18,10 @@
 
 (leaf f :elpaca t :require t)
 (leaf s :elpaca t :require t)
-(leaf hydra :elpaca t)
-(leaf delight :elpaca t)
+(leaf blackout :elpaca t)
 (leaf transient :elpaca t)
 (leaf casual :elpaca t)
+(leaf hydra :elpaca t)
 (leaf dash
   :elpaca (dash :wait t)
   :require t)
@@ -178,7 +178,7 @@ instead.
 
 (leaf rainbow-mode
   :elpaca t
-  :delight t
+  :blackout t
   :hook (emacs-lisp-mode-hook
          conf-space-mode-hook
          conf-toml-mode-hook
@@ -242,7 +242,7 @@ instead.
 ;;; Core settings
 
 (leaf emacs
-  :delight (eldoc-mode nil t)
+  :blackout eldoc-mode
   :custom
   ;; User credentials. Some functionality uses this to identify you,
   ;; e.g. GPG configuration, email clients, file templates and snippets.
@@ -1006,8 +1006,11 @@ HOOK should be a symbol."
 
 ;;;;; appearence
 
-(setq org-startup-indented t
-      org-fontify-whole-heading-line t
+(setq org-startup-indented t)
+(with-eval-after-load 'org-indent
+  (blackout 'org-indent-mode)) ;; Hide `org-indent-mode' from modeline.
+
+(setq org-fontify-whole-heading-line t
       org-fontify-quote-and-verse-blocks t
       org-pretty-entities t)
 
@@ -1211,6 +1214,7 @@ HOOK should be a symbol."
 
 (leaf org-pretty-tags
   :elpaca t
+  :blackout t
   :hook (org-mode-hook . org-pretty-tags-mode)
   :custom (org-pretty-tags-surrogate-strings . '(("attach" . "󰁦")
                                                  ("ATTACH" . "󰁦"))))
@@ -1226,6 +1230,7 @@ HOOK should be a symbol."
 
 (leaf org-auto-tangle
   :elpaca t
+  :blackout t
   :hook (org-mode-hook . org-auto-tangle-mode)
   ;; :custom (org-auto-tangle-babel-safelist . '("~/.config/emacs/README.org"))
   )
@@ -1281,7 +1286,7 @@ HOOK should be a symbol."
 
 (leaf consult-org-roam
   :elpaca t
-  :delight t
+  :blackout t
   :after org-roam
   :custom
   ;; Use ripgrep for searching with `consult-org-roam-search'.
@@ -1403,7 +1408,8 @@ HOOK should be a symbol."
 
 (leaf org-roam-ui
   :elpaca t
-  :delight t
+  :blackout (org-roam-ui-mode
+             org-roam-ui-follow-mode)
   :after org-roam
   :custom
   (org-roam-ui-sync-theme . t)
@@ -1600,9 +1606,8 @@ HOOK should be a symbol."
 (leaf outli
   :elpaca (outli :host github :repo "jdtsmith/outli")
   :after helix
-  :delight
-  outline-mode
-  (outline-minor-mode nil t)
+  :blackout (outline-mode
+             outline-minor-mode)
   ;; :hook (emacs-lisp-mode-hook . outli-mode)
   ;; :custom
   ;; Use <tab> and S-<tab> to cycle while point is on the button overlay.
@@ -2507,14 +2512,15 @@ quits any active region before exiting.  When there is no minibuffer
     "C-w" 'backward-kill-word ;; together with C-backspace
     "C-/" 'dabbrev-expand))
 
-;; (leaf keypad
-;;   :load-path "~/code/emacs/helix"
-;;   :require t
-;;   :config
-;;   ;; (helix-keymap-global-set 'normal
-;;   ;;   "SPC" #'keypad
-;;   ;;   "C-h k" #'keypad-describe-key)
-;;   )
+(leaf keypad
+  :load-path "~/code/emacs/helix"
+  :custom
+  (keypad-send-C-x-with-control-modifier . nil)
+  ;; :config
+  ;; (helix-keymap-global-set 'normal
+  ;;   "SPC" #'keypad
+  ;;   "C-h k" #'keypad-describe-key)
+  )
 
 ;;;; <leader> key
 
