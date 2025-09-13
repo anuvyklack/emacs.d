@@ -10,10 +10,10 @@
 
 (elpaca leaf (require 'leaf))
 (elpaca leaf-keywords
-        (require 'leaf-keywords)
-        ;; use :ensure keyword instead of :elpaca
-        ;; (custom-set-variables '(leaf-alias-keyword-alist '((:ensure . :elpaca))))
-        (leaf-keywords-init))
+  (require 'leaf-keywords)
+  ;; use :ensure keyword instead of :elpaca
+  ;; (custom-set-variables '(leaf-alias-keyword-alist '((:ensure . :elpaca))))
+  (leaf-keywords-init))
 (elpaca-wait)
 
 (leaf f :elpaca t :require t)
@@ -266,6 +266,9 @@ instead.
   (after-init-hook . savehist-mode)
   ;; Save the last location within a file upon reopening.
   (after-init-hook . save-place-mode)
+  ;; Show (line,column) indicator in modeline.
+  (after-init-hook . line-number-mode)
+  (after-init-hook . column-number-mode)
   :bind
   ([remap dabbrev-expand] . hippie-expand))
 
@@ -390,10 +393,10 @@ instead.
   (dolist (state '(normal motion))
     ;; tab-bar-mode-map
     (helix-keymap-global-set state
-                             "C-<tab>"     #'tab-next
-                             "C-<backtab>" #'tab-previous
-                             "] t" #'tab-next
-                             "[ t" #'tab-previous))
+      "C-<tab>"     #'tab-next
+      "C-<backtab>" #'tab-previous
+      "] t" #'tab-next
+      "[ t" #'tab-previous))
   (my-keymap-set helix-window-map
     "<tab>"     '("New tab" . my-tab-new)
     "<backtab>" '("Duplicate tab" . tab-duplicate)
@@ -791,27 +794,30 @@ With universal argument move current window into new tab."
 
 ;;;; xref (goto definition)
 
-;; (leaf dumb-jump
-;;   :elpaca t
-;;   :init (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
-
 (leaf xref
-  :elpaca dumb-jump
-  :hook
-  (xref-backend-functions . dumb-jump-xref-activate)
-  (xref-after-update-hook . outli-mode) ;; outline-minor-mode
   :custom
   ((xref-auto-jump-to-first-definition . 'show)
    (xref-prompt-for-identifier . nil)
    (xref-history-storage . #'xref-window-local-history)
    ;; (xref-show-definitions-function . #'xref-show-definitions-buffer-at-bottom)
-   ;; (xref-show-definitions-function . #'xref-show-definitions-buffer)
-   ;; (xref-show-xrefs-function . #'xref--show-xref-buffer)
-   (xref-show-xrefs-function . #'consult-xref)
-   (xref-show-definitions-function . #'consult-xref))
+   (xref-show-definitions-function . #'xref-show-definitions-buffer)
+   (xref-show-xrefs-function . #'xref--show-xref-buffer)
+   ;; (xref-show-xrefs-function . #'consult-xref)
+   ;; (xref-show-definitions-function . #'consult-xref)
+   )
   :config
   (advice-add 'xref-find-definitions :around #'my-xref-try-all-backends-a)
   (advice-add 'xref-find-references  :around #'my-xref-try-all-backends-a))
+
+(leaf dumb-jump
+  :elpaca t
+  :after xref
+  :hook (xref-backend-functions . dumb-jump-xref-activate))
+
+(leaf nerd-icons-xref
+  :elpaca t
+  :after xref
+  :global-minor-mode nerd-icons-xref-mode)
 
 (defun my-xref-try-all-backends-a (orig-fun &rest args)
   "Try all `xref-backend-functions' in row until first succeed."
@@ -838,6 +844,16 @@ HOOK should be a symbol."
 
 (leaf imenu-list
   :elpaca t)
+
+;;;; diff-hl
+
+(leaf diff-hl
+  :elpaca t
+  :global-minor-mode global-diff-hl-mode
+  :hook ((vc-dir-mode-hook . turn-on-diff-hl-mode)
+         (diff-hl-mode-hook . diff-hl-flydiff-mode))
+  :commands (diff-hl-stage-current-hunk diff-hl-revert-hunk diff-hl-next-hunk diff-hl-previous-hunk)
+  )
 
 ;;;; treemacs
 
@@ -935,12 +951,12 @@ HOOK should be a symbol."
 ;; (leaf treemacs-magit
 ;;   :elpaca t
 ;;   :after treemacs magit)
-;; 
+;;
 ;; ;; (use-package treemacs-persp ;;treemacs-perspective if you use perspective.el vs. persp-mode
 ;; ;;   :after (treemacs persp-mode) ;;or perspective vs. persp-mode
 ;; ;;   :ensure t
 ;; ;;   :config (treemacs-set-scope-type 'Perspectives))
-;; 
+;;
 ;; (leaf treemacs-tab-bar ;;treemacs-tab-bar if you use tab-bar-mode
 ;;   :elpaca t
 ;;   :after treemacs
@@ -1484,6 +1500,7 @@ HOOK should be a symbol."
 ;;;; scrolling over images
 
 (leaf org-sliced-images
+  :after org
   :elpaca t
   :global-minor-mode org-sliced-images-mode)
 
@@ -1558,7 +1575,8 @@ HOOK should be a symbol."
   ("M-m" . embark-dwim) ;; scroll-down-command
   ("C-v" . embark-act)  ;; scroll-up-command
   ("M-v" . embark-dwim) ;; scroll-down-command
-  (minibuffer-local-map :package emacs
+  (minibuffer-local-map
+   :package emacs
    ("C-c C-c" . embark-export)
    ("C-c <C-m>" . embark-collect)
    ("C-c C-v" . embark-collect))
@@ -1635,7 +1653,8 @@ HOOK should be a symbol."
     "z 2" (cons "Outline hide up to 2 sublevels"
                 (lambda () (interactive) (outline-hide-sublevels 2)))
     "z r" 'outline-show-all
-    "m o" 'outline-mark-subtree
+    "m h"   'outline-mark-subtree ;; mark heading
+    "m i h" 'outline-mark-subtree ;; mark heading
     "z p" '("Outline path" . outline-hide-other)
     ;; "z >" 'outline-promote
     ;; "z <" 'outline-demote
@@ -2190,9 +2209,9 @@ Replacement for `lisp-outline-level'."
     "z u" 'ibuffer-backward-filter-group)
 
   (my-keymap-set ibuffer--filter-map
-    "y" 'ibuffer-yank
-    "q" 'ibuffer-filter-disable
-    "Q" 'ibuffer-clear-filter-groups))
+                 "y" 'ibuffer-yank
+                 "q" 'ibuffer-filter-disable
+                 "Q" 'ibuffer-clear-filter-groups))
 
 ;;;;; ibuffer-vc
 
@@ -2470,7 +2489,7 @@ quits any active region before exiting.  When there is no minibuffer
   :require helix keypad
   :global-minor-mode helix-mode
   :custom
-  (track-eol . t) ; Vertical motion starting at end of line keeps to ends of lines.
+  ;; (track-eol . t) ; Vertical motion starting at end of line keeps to ends of lines.
   (pixel-scroll-precision-interpolation-total-time . 0.3)
   :config
   (helix-keymap-global-set 'normal
