@@ -18,13 +18,12 @@
 
 (leaf f :elpaca t :require t)
 (leaf s :elpaca t :require t)
+(leaf dash :elpaca (dash :wait t) :require t)
 (leaf blackout :elpaca t)
+(leaf nerd-icons :elpaca t)
 (leaf transient :elpaca t)
 (leaf casual :elpaca t)
 (leaf hydra :elpaca t)
-(leaf dash
-  :elpaca (dash :wait t)
-  :require t)
 
 ;; ;; Recursively add to `load-path' all folders in
 ;; ;; `$XDG_CONFIG_HOME/emacs/modules/' directory.
@@ -800,11 +799,12 @@ With universal argument move current window into new tab."
    (xref-prompt-for-identifier . nil)
    (xref-history-storage . #'xref-window-local-history)
    ;; (xref-show-definitions-function . #'xref-show-definitions-buffer-at-bottom)
-   (xref-show-definitions-function . #'xref-show-definitions-buffer)
-   (xref-show-xrefs-function . #'xref--show-xref-buffer)
-   ;; (xref-show-xrefs-function . #'consult-xref)
-   ;; (xref-show-definitions-function . #'consult-xref)
-   )
+   ;; (xref-show-definitions-function . #'xref-show-definitions-buffer)
+   ;; (xref-show-xrefs-function . #'xref--show-xref-buffer)
+   (xref-show-xrefs-function . #'consult-xref)
+   (xref-show-definitions-function . #'consult-xref))
+  :hook
+  (xref--xref-buffer-mode-hook . hl-line-mode)
   :config
   (advice-add 'xref-find-definitions :around #'my-xref-try-all-backends-a)
   (advice-add 'xref-find-references  :around #'my-xref-try-all-backends-a))
@@ -2209,9 +2209,9 @@ Replacement for `lisp-outline-level'."
     "z u" 'ibuffer-backward-filter-group)
 
   (my-keymap-set ibuffer--filter-map
-                 "y" 'ibuffer-yank
-                 "q" 'ibuffer-filter-disable
-                 "Q" 'ibuffer-clear-filter-groups))
+    "y" 'ibuffer-yank
+    "q" 'ibuffer-filter-disable
+    "Q" 'ibuffer-clear-filter-groups))
 
 ;;;;; ibuffer-vc
 
@@ -2489,35 +2489,35 @@ quits any active region before exiting.  When there is no minibuffer
   :require helix keypad
   :global-minor-mode helix-mode
   :custom
-  ;; (track-eol . t) ; Vertical motion starting at end of line keeps to ends of lines.
   (pixel-scroll-precision-interpolation-total-time . 0.3)
   :config
+  (my-keymap-set global-map
+    "C-M-;" 'eval-expression ;; default to M-; but in Helix it reverse region
+    "C-M-:" 'repeat-complex-command)
+  (helix-keymap-global-set 'motion
+    "<backspace>" #'execute-extended-command)
   (helix-keymap-global-set 'normal
     "<backspace>" 'execute-extended-command
-    "C-;"   'exchange-point-and-mark
-    "C-M-;" 'eval-expression ;; default M-; but in Helix it reverse region
-    "C-M-:" 'repeat-complex-command
-    ;; "C-M-:" 'consult-complex-command
+    "C-;"   'helix-exchange-point-and-mark
     "M-o"   'pop-to-mark-command
     "C-S-o" 'pop-global-mark
     "z SPC" 'cycle-spacing
     "z ."   'set-fill-prefix
     ;; goto commands
     "g <return>" 'consult-goto-line
-    "g :"   'consult-goto-line
-    "g a"   'describe-char
-    "g e"   'consult-compile-error
-    "g n"   'next-error
-    "g p"   'previous-error
-    "g o"   'consult-outline
-    "g i"   'consult-imenu
-    "g I"   'consult-imenu-multi
-    "g m"   'consult-mark
-    "g M"   'consult-global-mark
-    "g /"   'consult-ripgrep
-    ;; "g /"   'consult-line
-    ;; "g ?"   'consult-line-multi
-    ;; "g -"   'dired-jump
+    "g a" 'describe-char
+    "g e" 'consult-compile-error
+    "g n" 'next-error
+    "g p" 'previous-error
+    "g o" 'consult-outline
+    "g i" 'consult-imenu
+    "g I" 'consult-imenu-multi
+    "g m" 'consult-mark
+    "g M" 'consult-global-mark
+    ;; "g /" 'consult-ripgrep
+    ;; "g /" 'consult-line
+    ;; "g ?" 'consult-line-multi
+    ;; "g -" 'dired-jump
     )
   ;; C-w prefix
   (my-keymap-set helix-window-map
@@ -2602,32 +2602,39 @@ quits any active region before exiting.  When there is no minibuffer
   :after helix
   :config
   (helix-set-initial-state 'Info-mode 'normal)
+  (helix-inhibit-insert-state Info-mode-map)
   (helix-keymap-set Info-mode-map 'normal
     "u" 'Info-up
     "d" 'Info-directory
-    "s" 'Info-search
-    "S" 'Info-search-case-sensitively
     "i" 'Info-index
     "I" 'Info-virtual-index
     "a" 'info-apropos
     "M" 'helpful-at-point
 
     "g t" 'Info-toc
+    "M-h" 'Info-help
 
     "C-j" 'Info-next
     "C-k" 'Info-prev
     "z j" 'Info-forward-node
     "z k" 'Info-backward-node
     "z u" 'Info-up
+    "z U" 'Info-directory
     "z d" 'Info-directory
-    "z m" 'Info-menu
-    "g m" 'Info-menu
-    "M-h" 'Info-help
-    "H"   'Info-history
+
+    "/"     'Info-menu
+    "g /"   'Info-menu
+    "C-c /" 'Info-search
+    "C-c ?" 'Info-search-case-sensitively
+    "] ]"   'Info-next-reference
+    "[ ["   'Info-prev-reference
+
+    "H"     'Info-history
+    "C-c h" 'Info-history
     "C-<i>" 'Info-history-forward
-    "C-o" 'Info-history-back
-    "] ]" 'Info-next-reference
-    "[ [" 'Info-prev-reference))
+    "C-o"   'Info-history-back
+    "] h"   'Info-history-forward
+    "[ h"   'Info-history-back))
 
 ;;;; Paredit
 
