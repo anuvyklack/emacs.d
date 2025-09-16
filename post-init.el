@@ -8,19 +8,24 @@
 ;;       debug-on-quit t)
 ;;-----------------------
 
-(elpaca leaf (require 'leaf))
+(elpaca dash
+  (require 'dash))
+
+(elpaca leaf
+  (require 'leaf))
+
 (elpaca leaf-keywords
   (require 'leaf-keywords)
-  ;; use :ensure keyword instead of :elpaca
-  ;; (custom-set-variables '(leaf-alias-keyword-alist '((:ensure . :elpaca))))
+  ;; ;; Use :ensure keyword instead of :elpaca
+  ;; (setopt '(leaf-alias-keyword-alist '((:ensure . :elpaca))))
   (leaf-keywords-init))
-(elpaca-wait)
+
+(elpaca-wait) ;; Block until current Elpaca queue is processed.
 
 (leaf f :elpaca t :require t)
 (leaf s :elpaca t :require t)
-(leaf dash :elpaca (dash :wait t) :require t)
+(leaf nerd-icons :elpaca t :require t)
 (leaf blackout :elpaca t)
-(leaf nerd-icons :elpaca t)
 (leaf transient :elpaca t)
 (leaf casual :elpaca t)
 (leaf hydra :elpaca t)
@@ -316,14 +321,15 @@ instead.
     "s" 'helpful-symbol
     ;; Rebind `b' key from `describe-bindings' to prefix with more binding
     ;; related commands.
-    "b" `("bindings" . ,(define-keymap
-                          "b" 'describe-bindings
-                          "B" 'embark-bindings ;; alternative for `describe-bindings'
-                          "i" 'which-key-show-minor-mode-keymap
-                          "m" 'which-key-show-major-mode
-                          "t" 'which-key-show-top-level
-                          "f" 'which-key-show-full-keymap
-                          "k" 'which-key-show-keymap))
+    "b" (cons "bindings"
+              (define-keymap
+                "b" 'describe-bindings
+                "B" 'embark-bindings ;; alternative for `describe-bindings'
+                "i" 'which-key-show-minor-mode-keymap
+                "m" 'which-key-show-major-mode
+                "t" 'which-key-show-top-level
+                "f" 'which-key-show-full-keymap
+                "k" 'which-key-show-keymap))
     "C-c" nil)) ;; unbind `describe-copying'
 
 ;; define-key
@@ -739,8 +745,7 @@ With universal argument move current window into new tab."
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file)
   (add-hook 'completion-at-point-functions #'cape-elisp-block)
-  (add-hook 'completion-at-point-functions #'cape-history)
-  )
+  (add-hook 'completion-at-point-functions #'cape-history))
 
 ;;; Search
 ;;;; deadgrep
@@ -1018,7 +1023,9 @@ HOOK should be a symbol."
  org-log-redeadline 'note
  org-log-reschedule nil
  org-blank-before-new-entry '((heading . t)
-                              (plain-list-item . auto)))
+                              (plain-list-item . auto))
+
+ org-special-ctrl-a/e t)
 
 ;;;;; appearence
 
@@ -1231,6 +1238,7 @@ HOOK should be a symbol."
 (leaf org-pretty-tags
   :elpaca t
   :blackout t
+  :after org
   :hook (org-mode-hook . org-pretty-tags-mode)
   :custom (org-pretty-tags-surrogate-strings . '(("attach" . "󰁦")
                                                  ("ATTACH" . "󰁦"))))
@@ -1560,6 +1568,7 @@ HOOK should be a symbol."
              embark-collect
              embark-bindings
              embark-prefix-help-command)
+  :hook (embark-collect-mode-hook . hl-line-mode)
   :custom
   (which-key-use-C-h-commands . nil)
   (prefix-help-command . 'embark-prefix-help-command)
@@ -1616,7 +1625,7 @@ HOOK should be a symbol."
 
 (leaf embark-consult
   :elpaca t
-  :hook (embark-collect-mode . consult-preview-at-point-mode))
+  :hook (embark-collect-mode-hook . consult-preview-at-point-mode))
 
 ;;;; outline
 
@@ -1637,7 +1646,7 @@ HOOK should be a symbol."
    ("<tab>" . outline-cycle)
    ("<backtab>" . outline-cycle-buffer))
   :defer-config
-  (define-advice outline-up-heading (:before (&rest args) push-mark)
+  (helix-define-advice outline-up-heading (:before (&rest _) push-mark)
     (helix-push-point))
 
   ;; Keybindings
@@ -1840,23 +1849,27 @@ Replacement for `lisp-outline-level'."
     "!" 'dired-do-shell-command
     "&" 'dired-do-async-shell-command
 
+    "x" 'dired-do-flagged-delete
+    "X" 'dired-do-flagged-delete-permanently
+
     "C-c u" 'dired-undo
     ;; "C-c a" 'org-attach-dired-to-subtree
 
     "s" 'dired-sort-toggle-or-edit
     "S" 'casual-dired-sort-by-tmenu
 
-    "o" 'dired-do-open
+    "o"   'dired-do-open
     "RET" 'dired-do-open
     "C-w <return>" 'dired-find-file-other-window
     "w"   'dired-display-file
 
     "("   'dired-hide-details-mode
+    ")"   'my-dired-toggle-omit-mode
+    "z ," 'dired-hide-details-mode
+    "z ." 'my-dired-toggle-omit-mode
+
     "z d" 'dired-hide-details-mode
     "z i" 'dired-hide-details-mode
-
-    ")"   'my-dired-toggle-omit-mode
-    "z ." 'my-dired-toggle-omit-mode
 
     "<" 'dired-prev-marked-file
     ">" 'dired-next-marked-file
@@ -1874,14 +1887,6 @@ Replacement for `lisp-outline-level'."
                 "h" 'dired-do-hardlink
                 "x" 'dired-do-shell-command
                 "X" 'dired-do-async-shell-command))
-    "f" (define-keymap
-          "RET" 'dired-do-open
-          "o" 'dired-do-open
-          "d" 'dired-do-delete
-          "c" 'dired-do-compress-to
-          "z" 'dired-do-compress
-          "x" 'dired-do-shell-command
-          "X" 'dired-do-async-shell-command)
     "g" (define-keymap
           "RET" 'dired-do-open
           "o" 'dired-find-file-other-window
@@ -1892,6 +1897,8 @@ Replacement for `lisp-outline-level'."
           "c" 'dired-do-compress-to
           "z" 'dired-do-compress
           "l" 'dired-do-load
+          "s" 'dired-do-shell-command
+          "S" 'dired-do-async-shell-command
 
           "u" 'dired-upcase
           "U" 'dired-downcase
@@ -2090,7 +2097,7 @@ Replacement for `lisp-outline-level'."
    ("n" . image-dired-display-next)
    ("p" . image-dired-display-previous)))
 
-;;;; ibuffer
+;;;; Ibuffer
 
 (leaf ibuffer
   :custom
@@ -2166,32 +2173,34 @@ Replacement for `lisp-outline-level'."
   (my-keymap-set ibuffer-mode-map
     "C-c f f" 'ibuffer-find-file
 
-    ;; Inherit hjkl keys from `special-mode-map'
-    "h"   nil
-    "j"   nil ;; ibuffer-jump-to-buffer
-    "k"   nil ;; ibuffer-do-kill-lines
-    "l"   nil ;; ibuffer-redisplay
+    ;; Inherit hjkl keys from `special-mode-map'.
+    "h" nil
+    "j" nil ;; ibuffer-jump-to-buffer
+    "k" nil ;; ibuffer-do-kill-lines
+    "l" nil ;; ibuffer-redisplay
 
-    ">"   'ibuffer-forward-next-marked
-    "<"   'ibuffer-backwards-next-marked
+    ">" 'ibuffer-forward-next-marked
+    "<" 'ibuffer-backwards-next-marked
 
     "d"   'ibuffer-mark-for-delete
     "M-d" 'ibuffer-mark-for-delete-backwards
     "x"   'ibuffer-do-kill-on-deletion-marks
 
-    "K"   'ibuffer-do-kill-lines
-    "f"   `("filter" . ,ibuffer--filter-map)
-    "/"   'ibuffer-jump-to-buffer ;; ibuffer--filter-map
+    "K" 'ibuffer-do-kill-lines
+    "f" `("filter" . ,ibuffer--filter-map)
+    "/" 'ibuffer-jump-to-buffer ;; ibuffer--filter-map
 
-    "g"    nil ;; ibuffer-update
-    "g r" 'ibuffer-update ;; just use C-c b r
-    "g R" 'ibuffer-redisplay
+    "g" (define-keymap
+          "r" 'ibuffer-update ;; just use C-c b r
+          "R" 'ibuffer-redisplay
+          "d" 'ibuffer-do-delete
+          "s" 'ibuffer-do-save
 
-    "g j" 'ibuffer-forward-line
-    "g k" 'ibuffer-backward-line
+          "j" 'ibuffer-forward-line
+          "k" 'ibuffer-backward-line)
 
-    "X"   'ibuffer-bury-buffer
-    "R"   'ibuffer-do-replace-regexp
+    "X" 'ibuffer-bury-buffer
+    "R" 'ibuffer-do-replace-regexp
     ;; "A"   #'ibuffer-do-view-horizontally
 
     "v"     'ibuffer-do-view-horizontally
@@ -2325,7 +2334,7 @@ Replacement for `lisp-outline-level'."
                                    (space-mark ?\  [?·] [?.]))))
 
 ;;; Major-modes
-;;;; Special mode
+;;;; special-mode
 
 ;; (with-eval-after-load 'helix
 ;;   (helix-keymap-set special-mode-map 'motion
@@ -2346,20 +2355,10 @@ Replacement for `lisp-outline-level'."
   ;; :custom
   ;; (pp-default-function . #'pp-emacs-lisp-code)
   :hook
+  (lisp-data-mode-hook . helix-paredit-mode)
   (emacs-lisp-mode-hook
    . (lambda ()
        (setq-local tab-width 8)
-       ;; (setq-local outline-regexp "\\(;;;+ \\)")
-       ;; imenu-create-index-function
-       (setq imenu-generic-expression
-             '(("Major modes" "^\\s-*(define-derived-mode +\\([^ ()\n]+\\)" 1)
-               ("Minor modes" "^\\s-*(define-\\(?:global\\(?:ized\\)?-minor\\|generic\\|minor\\)-mode +\\([^ ()\n]+\\)" 1)
-               ("Macros" "^\\s-*(\\(?:cl-\\)?def\\(?:ine-compile-macro\\|macro\\) +\\([^ )\n]+\\)" 1)
-               ("Inline functions" "\\s-*(\\(?:cl-\\)?defsubst +\\([^ )\n]+\\)" 1)
-               ("Functions" "^\\s-*(\\(?:cl-\\)?def\\(?:un\\|un\\*\\|method\\|generic\\|-memoized!\\) +\\([^ ,)\n]+\\)" 1)
-               ("Variables" "^\\s-*(\\(def\\(?:c\\(?:onst\\(?:ant\\)?\\|ustom\\)\\|ine-symbol-macro\\|parameter\\|var\\(?:-local\\)?\\)\\)\\s-+\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)" 2)
-               ("Types" "^\\s-*(\\(cl-def\\(?:struct\\|type\\)\\|def\\(?:class\\|face\\|group\\|ine-\\(?:condition\\|error\\|widget\\)\\|package\\|struct\\|t\\(?:\\(?:hem\\|yp\\)e\\)\\)\\)\\s-+'?(?\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)+\\)" 2)
-               ("Headings" "^[ \t]*;;;+\\**[ \t]+\\([^\n]+\\)" 1)))
        ;; Minor modes
        ;; -----------
        ;; Order matters because `outline-minor-mode' and `helix-paredit-mode'
@@ -2367,7 +2366,6 @@ Replacement for `lisp-outline-level'."
        ;; overlap `outline-minor-mode' bindings.
        (outli-mode 1)
        (helix-paredit-mode 1)))
-  (lisp-data-mode-hook . helix-paredit-mode)
 
   :config
   (helix-keymap-set emacs-lisp-mode-map 'normal
@@ -2384,22 +2382,22 @@ Replacement for `lisp-outline-level'."
                     ;; "m" 'macrostep-expand
                     "m" 'emacs-lisp-macroexpand
                     "p" 'pp-macroexpand-last-sexp)))
+
   (helix-keymap-set lisp-data-mode-map 'normal
     "M" '("Documentation" . helpful-at-point))
 
-  ;; ;; Treat `-' char as part of the word on 'w', 'e', 'b', motions.
+  ;; ;; Treat `-' char as part of the word on `w', `e', `b', motions.
   ;; (modify-syntax-entry ?- "w" emacs-lisp-mode-syntax-table)
   ;; (modify-syntax-entry ?_ "w" emacs-lisp-mode-syntax-table)
 
   (with-eval-after-load 'consult-imenu
     (setf (alist-get 'emacs-lisp-mode consult-imenu-config)
-          '( :toplevel "Headings" ;; "Functions"
+          '( :toplevel "Functions"
              :types ((?h "Headings"  font-lock-constant-face)
                      (?f "Functions" font-lock-function-name-face)
-                     (?m "Macros"    font-lock-function-name-face)
-                     ;; (?p "Packages"  font-lock-constant-face)
                      (?v "Variables" font-lock-variable-name-face)
-                     (?t "Types"     font-lock-type-face))))))
+                     (?t "Types"     font-lock-type-face)
+                     (?l "Leaf"      font-lock-keyword-face))))))
 
 (leaf elisp-demos
   :elpaca t
@@ -2441,7 +2439,7 @@ Replacement for `lisp-outline-level'."
 ;; `highlight-defined-builtin-function-name-face'
 (leaf highlight-defined
   :elpaca t
-  :custom (highlight-defined-face-use-itself . nil)
+  :custom (highlight-defined-face-use-itself . t)
   :hook ((help-mode-hook . highlight-defined-mode)
          (emacs-lisp-mode-hook . highlight-defined-mode)))
 
