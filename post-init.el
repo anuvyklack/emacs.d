@@ -826,7 +826,7 @@ With universal argument move current window into new tab."
 
 (defun my-xref-try-all-backends-a (orig-fun &rest args)
   "Try all `xref-backend-functions' in row until first succeed."
-  (let* (jumped
+  (let* ((jumped nil)
          (xref-after-jump-hook (cons (lambda () (setq jumped t))
                                      xref-after-jump-hook)))
     (cl-dolist (backend (my-hook-values 'xref-backend-functions))
@@ -1578,53 +1578,51 @@ HOOK should be a symbol."
                '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
                  nil
                  (window-parameters (mode-line-format . none))))
-  :bind
-  ("C-<return>" . embark-act)
-  ("<C-m>" . embark-act)
-  ("M-m" . embark-dwim) ;; scroll-down-command
-  ("C-v" . embark-act)  ;; scroll-up-command
-  ("M-v" . embark-dwim) ;; scroll-down-command
-  (minibuffer-local-map
-   :package emacs
-   ("C-c C-c" . embark-export)
-   ("C-c <C-m>" . embark-collect)
-   ("C-c C-v" . embark-collect))
-  (embark-general-map
-   ("C-v" . embark-select)
-   ("<C-m>" . embark-select)
-   ("y" . embark-copy-as-kill)
-   ;; ("m" . mark)
-   )
-  (embark-region-map
-   ("F" . fill-region-as-paragraph)
-   ("w" . whitespace-cleanup-region)
-   ("n" . helix-narrow-to-region-indirectly))
-  (embark-symbol-map
-   ("h" . helpful-symbol))
-  (embark-heading-map
-   ("m" . outline-mark-subtree))
-  ;; (embark-expression-map
-  ;;  ("j" . forward-list)   ;; n
-  ;;  ("k" . backward-list)) ;; p
+  ;; Keybindings
+  :init
+  (my-keymap-set global-map
+    "C-<return>" 'embark-act
+    "C-v"   'embark-act  ;; scroll-up-command
+    "M-v"   'embark-dwim ;; scroll-down-command
+    "C-<m>" 'embark-act
+    "M-m"   'embark-dwim)
+  (my-keymap-set minibuffer-local-map
+    "C-c C-c"   'embark-export
+    "C-c C-v"   'embark-collect
+    "C-c C-<m>" 'embark-collect)
   :config
+  (my-keymap-set embark-general-map
+    "C-v"   'embark-select
+    "C-<m>" 'embark-select
+    "y"     'embark-copy-as-kill
+    ;; "m"     'mark
+    )
+  (my-keymap-set embark-region-map
+    "F" 'fill-region-as-paragraph
+    "w" 'whitespace-cleanup-region
+    "n" 'helix-narrow-to-region-indirectly)
+  (my-keymap-set embark-symbol-map
+    "h" 'helpful-symbol)
+  (my-keymap-set embark-heading-map
+    "m" 'outline-mark-subtree)
   ;; Unbind keys that I will never use with Helix so as not to clutter up menus.
   ;; I use `my-keymap-set' because it actually remove keybindings from keymap,
   ;; while `:bind' only binds them to nil.
-  (with-eval-after-load 'helix
-    (my-keymap-set embark-general-map
-      "C-SPC" nil  ;; mark
-      "DEL"   nil  ;; delete-region
-      "w"     nil) ;; embark-copy-as-kill
-    (my-keymap-set embark-region-map
-      "u" nil  ;; upcase-region
-      "l" nil  ;; downcase-region
-      ";" nil  ;; comment-or-uncomment-region
-      "W" nil) ;; write-region
-    (my-keymap-set embark-heading-map
-      "C-SPC" nil))) ;; outline-mark-subtree
+  (my-keymap-set embark-general-map
+    "C-SPC" nil  ;; mark
+    "DEL"   nil  ;; delete-region
+    "w"     nil) ;; embark-copy-as-kill
+  (my-keymap-set embark-region-map
+    "u" nil  ;; upcase-region
+    "l" nil  ;; downcase-region
+    ";" nil  ;; comment-or-uncomment-region
+    "W" nil) ;; write-region
+  (my-keymap-set embark-heading-map
+    "C-SPC" nil)) ;; outline-mark-subtree
 
 (leaf embark-consult
   :elpaca t
+  :after consult
   :hook (embark-collect-mode-hook . consult-preview-at-point-mode))
 
 ;;;; outline
@@ -2439,7 +2437,7 @@ Replacement for `lisp-outline-level'."
 ;; `highlight-defined-builtin-function-name-face'
 (leaf highlight-defined
   :elpaca t
-  :custom (highlight-defined-face-use-itself . t)
+  ;; :custom (highlight-defined-face-use-itself . t)
   :hook ((help-mode-hook . highlight-defined-mode)
          (emacs-lisp-mode-hook . highlight-defined-mode)))
 
@@ -2641,7 +2639,6 @@ quits any active region before exiting.  When there is no minibuffer
   paredit
   (helix-paredit :repo "~/code/emacs/helix-paredit")
   :after helix
-  ;; :hook (emacs-lisp-mode-hook . helix-paredit-mode)
   :defer-config
   (helix-keymap-set helix-paredit-mode-map 'normal
     "C-c w" 'paredit-wrap-round
