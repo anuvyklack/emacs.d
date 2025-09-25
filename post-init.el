@@ -30,6 +30,9 @@
 (leaf casual :elpaca t)
 (leaf hydra :elpaca t)
 
+;; ;; Profiler
+;; (leaf esup :elpaca t)
+
 ;; ;; Recursively add to `load-path' all folders in
 ;; ;; `$XDG_CONFIG_HOME/emacs/modules/' directory.
 ;; (let ((modules-dir (-> (file-name-concat (xdg-config-home) "emacs" "modules")
@@ -764,11 +767,10 @@ With universal argument move current window into new tab."
 
 (leaf consult-project-extra
   :elpaca t
-  :bind
-  (project-prefix-map
-   :package project
-   ("p" . consult-project-extra-find)
-   ("P" . consult-project-extra-find-other-window)))
+  :config
+  (my-keymap-set project-prefix-map
+    "p" 'consult-project-extra-find
+    "P" 'consult-project-extra-find-other-window))
 
 ;;;; DISABLED projectile
 
@@ -852,13 +854,14 @@ HOOK should be a symbol."
 
 ;;;; diff-hl
 
+;; diff-hl-command-map
+;; diff-hl-mode-map
 (leaf diff-hl
   :elpaca t
+  :commands (diff-hl-stage-current-hunk diff-hl-revert-hunk diff-hl-next-hunk diff-hl-previous-hunk)
   :global-minor-mode global-diff-hl-mode
   :hook ((vc-dir-mode-hook . turn-on-diff-hl-mode)
-         (diff-hl-mode-hook . diff-hl-flydiff-mode))
-  :commands (diff-hl-stage-current-hunk diff-hl-revert-hunk diff-hl-next-hunk diff-hl-previous-hunk)
-  )
+         (diff-hl-mode-hook . diff-hl-flydiff-mode)))
 
 ;;;; treemacs
 
@@ -1589,7 +1592,8 @@ HOOK should be a symbol."
   (my-keymap-set minibuffer-local-map
     "C-c C-c"   'embark-export
     "C-c C-v"   'embark-collect
-    "C-c C-<m>" 'embark-collect)
+    "C-c C-<m>" 'embark-collect
+    "C-c b"     'embark-become)
   :config
   (my-keymap-set embark-general-map
     "C-v"   'embark-select
@@ -2331,6 +2335,82 @@ Replacement for `lisp-outline-level'."
                                    (newline-mark ?\n [?¬ ?\n])
                                    (space-mark ?\  [?·] [?.]))))
 
+;;;; magit
+
+(leaf magit
+  :elpaca t
+  :custom
+  (magit-diff-refine-hunk . 'all)
+  (magit-diff-hide-trailing-cr-characters . t)
+  ;; hide ^M characters at the end of a line in diffs
+  (magit-diff-hide-trailing-cr-characters . t)
+  ;; (magit-display-buffer-function . #'my/magit-display-buffer-fn)
+  )
+
+(leaf forge
+  :elpaca t)
+
+(leaf ghub
+  :elpaca t)
+
+(leaf code-review
+  :elpaca (code-review :host github :repo "doomelpa/code-review"))
+
+(leaf browse-at-remote
+  :elpaca)
+
+(leaf git-timemachine
+  :elpaca t)
+
+(leaf git-modes
+  :elpaca t)
+
+(leaf vc
+  :custom
+  ;; Remove RCS, CVS, SCCS, and Bzr, because it's a lot less work for vc to
+  ;; check them all (especially in TRAMP buffers), and who uses any of these?
+  (vc-handled-backends . '(Git Hg SVN SRC))
+  ;; PERF: Ignore node_modules (expensive for vc ops to index).
+  `(vc-ignore-dir-regexp . ,(format "%s\\|%s"
+                                    locate-dominating-stop-dir-regexp
+                                    "[/\\\\]node_modules")))
+
+(leaf vc-annotate
+  :commands vc-annotate
+  :config
+  (keymap-set vc-annotate-mode-map "<remap> <quit-window>" #'kill-current-buffer))
+
+(leaf smerge-mode)
+
+;; (define-advice magit-display-buffer-traditional
+;;       (:around (orig-fun buffer) open-status-buffer-in-current-window)
+;;     "Show `magit-status' buffer in current window."
+;;     (if (with-current-buffer buffer
+;;           (equal major-mode 'magit-status-mode))
+;;         (display-buffer buffer '(display-buffer-same-window))
+;;       ;; else
+;;       (funcall orig-fun buffer)))
+
+(defun my/magit-display-buffer-fn (buffer)
+    "The same as `magit-display-buffer-traditional', except:
+- Open status buffer in the same window;
+- Magit process windows are always opened in small windows below the current. "
+    (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
+      (display-buffer
+       buffer (cond ((eq buffer-mode 'magit-status-mode)
+                     '(display-buffer-same-window))
+                    ((eq buffer-mode 'magit-process-mode)
+                     '(display-buffer-below-selected
+                       (window-height . (truncate (* (window-height) 0.35)))))
+                    ((and (derived-mode-p 'magit-mode)
+                          (not (memq buffer-mode
+                                     '(magit-process-mode
+                                       magit-revision-mode
+                                       magit-diff-mode
+                                       magit-stash-mode))))
+                     '(display-buffer-same-window))
+                    ('(+magit--display-buffer-in-direction))))))
+
 ;;; Major-modes
 ;;;; special-mode
 
@@ -2490,6 +2570,9 @@ quits any active region before exiting.  When there is no minibuffer
   (my-keymap-set global-map
     "C-M-;" 'eval-expression ;; default to M-; but in Helix it reverse region
     "C-M-:" 'repeat-complex-command)
+  ;; (helix-keymap-set minibuffer-local-map 'insert
+  ;;   "C-j" 'next-line-or-history-element
+  ;;   "C-k" 'previous-line-or-history-element)
   (helix-keymap-global-set 'motion
     "<backspace>" #'execute-extended-command)
   (helix-keymap-global-set 'normal
@@ -2587,7 +2670,9 @@ quits any active region before exiting.  When there is no minibuffer
                     "t" 'treemacs
                     "i" 'imenu-list-smart-toggle))
   "s" `("search" . ,search-map)
-  "p" `("project" . ,project-prefix-map))
+  "p" `("project" . ,project-prefix-map)
+  "v" `("version control" . vc-prefix-map)
+  )
 
 (my-keymap-set search-map
   "i" 'imenu)
@@ -2641,7 +2726,6 @@ quits any active region before exiting.  When there is no minibuffer
   :after helix
   :defer-config
   (helix-keymap-set helix-paredit-mode-map 'normal
-    "C-c w" 'paredit-wrap-round
     "C-h" 'helix-paredit-backward
     "C-j" 'helix-paredit-down-sexp
     "C-k" 'helix-paredit-backward-up-sexp
