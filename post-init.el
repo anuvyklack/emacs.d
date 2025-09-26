@@ -133,25 +133,20 @@ instead.
   "Return SYMBOL's original value."
   (car (get symbol 'standard-value)))
 
+(defun my-disable-hl-line-mode ()
+  "Disable the highlighting of current line."
+  (setq-local global-hl-line-mode nil)
+  (global-hl-line-unhighlight))
+
 ;;; Appearance
 
 (add-hook 'prog-mode-hook #'blink-cursor-mode)
-
-(leaf display-line-numbers
-  :hook prog-mode-hook text-mode-hook conf-mode-hook
-  :custom
-  (display-line-numbers-type . t)
-  ;; Explicitly define a width to reduce the cost of on-the-fly computation.
-  ;; (display-line-numbers-width . 3)
-  (display-line-numbers-width-start . t)
-  ;; Show absolute line numbers for narrowed regions to make it easier to tell
-  ;; the buffer is narrowed, and where you are, exactly.
-  (display-line-numbers-widen . t)
-  (display-line-numbers-grow-only . t))
+(global-hl-line-mode)
 
 (add-hook 'prog-mode-hook
           #'(lambda ()
               (setq-local
+               global-hl-line-mode nil ;; Disable current line highlighting.
                ;; Highlight trailing whitespaces with `trailing-whitespace' face.
                ;; Use `delete-trailing-whitespace' command.
                show-trailing-whitespace t
@@ -180,6 +175,20 @@ instead.
   ;; Load my customizations
   (load-file (file-name-concat (xdg-config-home) "emacs/modules/ef-light.el"))
   (enable-theme 'ef-light))
+
+;;;; Line numbers
+
+(leaf display-line-numbers
+  :hook prog-mode-hook text-mode-hook conf-mode-hook
+  :custom
+  (display-line-numbers-type . t)
+  ;; Explicitly define a width to reduce the cost of on-the-fly computation.
+  ;; (display-line-numbers-width . 3)
+  (display-line-numbers-width-start . t)
+  ;; Show absolute line numbers for narrowed regions to make it easier to tell
+  ;; the buffer is narrowed, and where you are, exactly.
+  (display-line-numbers-widen . t)
+  (display-line-numbers-grow-only . t))
 
 ;;;; Colorize strings that represent colors
 
@@ -310,7 +319,10 @@ instead.
 (leaf helpful
   :elpaca t
   :require helpful
-  :hook (helpful-mode-hook . outline-minor-mode)
+  :hook
+  (helpful-mode-hook . outline-minor-mode)
+  (helpful-mode-hook . my-disable-hl-line-mode)
+  (help-mode-hook . my-disable-hl-line-mode)
   :custom (help-window-select . t)
   :bind `(([remap describe-function] . helpful-callable)
           ([remap describe-variable] . helpful-variable)
@@ -394,40 +406,41 @@ instead.
   (tab-bar-show . t)
   (tab-bar-history-limit . 20)
   :config
-  ;; (global-set-key [remap winner-undo] #'tab-bar-history-back)
-  ;; (global-set-key [remap winner-redo] #'tab-bar-history-forward)
-  (keymap-global-set "<remap> <winner-undo>" #'tab-bar-history-back)
-  (keymap-global-set "<remap> <winner-redo>" #'tab-bar-history-forward)
+  ;; (global-set-key [remap winner-undo] 'tab-bar-history-back)
+  ;; (global-set-key [remap winner-redo] 'tab-bar-history-forward)
+  (keymap-global-set "<remap> <winner-undo>" 'tab-bar-history-back)
+  (keymap-global-set "<remap> <winner-redo>" 'tab-bar-history-forward)
   (dolist (state '(normal motion))
     ;; tab-bar-mode-map
     (helix-keymap-global-set state
-      "C-<tab>"     #'tab-next
-      "C-<backtab>" #'tab-previous
-      "] t" #'tab-next
-      "[ t" #'tab-previous))
+      "C-<tab>"     'tab-next
+      "C-<backtab>" 'tab-previous
+      "] t" 'tab-next
+      "[ t" 'tab-previous))
   (my-keymap-set helix-window-map
-    "<tab>"     '("New tab" . my-tab-new)
-    "<backtab>" '("Duplicate tab" . tab-duplicate)
-    "C-<tab>"   #'other-tab-prefix
+    "<tab>"   '("New tab" . my-tab-new)
+    "C-<tab>" 'other-tab-prefix
+    "m" 'other-tab-prefix ;; next to `n' which is `other-window-prefix'
     "u" '("Winner undo" . tab-bar-history-back)
     "U" '("Winner redo" . tab-bar-history-forward)
-    "t" (cons "tab-bar" (define-keymap
-                          "t" #'my-tab-new
-                          "T" #'tab-duplicate
-                          "c" #'tab-close
-                          "C" #'tab-close-other ;; Close all other tabs.
-                          "g" #'tab-group       ;; Add current tab to group.
-                          ">" #'tab-bar-move-tab
-                          "<" #'tab-bar-move-tab-backward
-                          "F" #'tab-detach
-                          "n" #'other-tab-prefix
-                          "d" #'dired-other-tab
-                          "r" #'tab-rename
-                          "u" #'tab-undo)))) ;; Restore last closed tab.
+    "t" (cons "tab-bar"
+              (define-keymap
+                ;; "t" 'my-tab-new
+                "t" 'tab-duplicate
+                "d" 'tab-duplicate
+                "n" 'other-tab-prefix
+                "g" 'tab-group ;; Add current tab to group.
+                ">" 'tab-bar-move-tab
+                "<" 'tab-bar-move-tab-backward
+                "r" 'tab-rename
+                "u" 'tab-undo ;; Restore last closed tab.
+                "c" 'tab-close
+                "o" 'tab-close-other ;; Close all other tabs.
+                "w" 'tab-window-detach
+                "F" 'tab-detach))))
 
 (defun my-tab-new (arg)
-  "Create new tab.
-With universal argument move current window into new tab."
+  "Create new tab. With `universal argument' detach current window into new tab."
   (interactive "P")
   (if arg (tab-window-detach) (tab-new)))
 
@@ -753,7 +766,6 @@ With universal argument move current window into new tab."
 ;;; Search
 ;;;; deadgrep
 
-;; https://github.com/Wilfred/deadgrep
 (leaf deadgrep
   :elpaca t
   :config
@@ -802,7 +814,8 @@ With universal argument move current window into new tab."
 
 (leaf xref
   :custom
-  ((xref-auto-jump-to-first-definition . 'show)
+  ((xref-search-program  . 'ripgrep) ;; or 'ugrep
+   (xref-auto-jump-to-first-definition . 'show)
    (xref-prompt-for-identifier . nil)
    (xref-history-storage . #'xref-window-local-history)
    ;; (xref-show-definitions-function . #'xref-show-definitions-buffer-at-bottom)
@@ -810,8 +823,6 @@ With universal argument move current window into new tab."
    ;; (xref-show-xrefs-function . #'xref--show-xref-buffer)
    (xref-show-xrefs-function . #'consult-xref)
    (xref-show-definitions-function . #'consult-xref))
-  :hook
-  (xref--xref-buffer-mode-hook . hl-line-mode)
   :config
   (advice-add 'xref-find-definitions :around #'my-xref-try-all-backends-a)
   (advice-add 'xref-find-references  :around #'my-xref-try-all-backends-a))
@@ -1571,7 +1582,6 @@ HOOK should be a symbol."
              embark-collect
              embark-bindings
              embark-prefix-help-command)
-  :hook (embark-collect-mode-hook . hl-line-mode)
   :custom
   (which-key-use-C-h-commands . nil)
   (prefix-help-command . 'embark-prefix-help-command)
@@ -1762,8 +1772,7 @@ Replacement for `lisp-outline-level'."
   (dired-create-destination-dirs . 'ask)
   (dired-maybe-use-globstar . t)
   :hook
-  (dired-mode-hook . dired-hide-details-mode)
-  (dired-mode-hook . hl-line-mode))
+  (dired-mode-hook . dired-hide-details-mode))
 
 (leaf dired-x
   :custom (dired-omit-files . "\\`[.]?#\\|\\`[.][.]?\\'\\|\\`[.].+")
@@ -1790,7 +1799,20 @@ Replacement for `lisp-outline-level'."
   :custom (dired-du-size-format . t))
 
 (leaf wdired
-  :custom (wdired-allow-to-change-permissions . t)) ; or 'advanced
+  :after helix
+  :custom
+  (wdired-use-dired-vertical-movement . t)
+  (wdired-allow-to-change-permissions . t) ; or 'advanced
+  :defer-config
+  (advice-add 'wdired-change-to-wdired-mode :after #'my-disable-hl-line-mode)
+  ;; Re-enable current line highlighting on switching back to `dired-mode'.
+  (advice-add 'wdired-change-to-dired-mode :after
+              (lambda () (setq-local global-hl-line-mode t)))
+  (helix-keymap-set wdired-mode-map 'normal
+    ;; "C-x C-s" 'wdired-finish-edit
+    "Z Z" 'wdired-finish-edit
+    "Z Q" 'wdired-abort-changes
+    "<escape>" 'wdired-exit))
 
 ;;;;; dired filter
 
@@ -1843,7 +1865,7 @@ Replacement for `lisp-outline-level'."
     ;; "l" 'dired-open-file ;; from `dired-hacks' package
 
     "/" 'dired-goto-file
-    "i" 'dired-toggle-read-only
+    "i" 'dired-toggle-read-only ;; wdired
     "K" 'dired-do-kill-lines
     "r" 'dired-do-redisplay
     "?" 'casual-dired-tmenu
@@ -2119,7 +2141,6 @@ Replacement for `lisp-outline-level'."
   (ibuffer-eliding-string . "…")
   :hook
   (ibuffer-mode-hook . ibuffer-auto-mode) ;; automatically update ibuffer
-  (ibuffer-mode-hook . hl-line-mode)
   :config
   (cl-pushnew #'helpful-mode ibuffer-help-buffer-modes)
   ;; (ibuffer-switch-to-saved-filter-groups "home")
@@ -2392,24 +2413,24 @@ Replacement for `lisp-outline-level'."
 ;;       (funcall orig-fun buffer)))
 
 (defun my/magit-display-buffer-fn (buffer)
-    "The same as `magit-display-buffer-traditional', except:
+  "The same as `magit-display-buffer-traditional', except:
 - Open status buffer in the same window;
 - Magit process windows are always opened in small windows below the current. "
-    (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
-      (display-buffer
-       buffer (cond ((eq buffer-mode 'magit-status-mode)
-                     '(display-buffer-same-window))
-                    ((eq buffer-mode 'magit-process-mode)
-                     '(display-buffer-below-selected
-                       (window-height . (truncate (* (window-height) 0.35)))))
-                    ((and (derived-mode-p 'magit-mode)
-                          (not (memq buffer-mode
-                                     '(magit-process-mode
-                                       magit-revision-mode
-                                       magit-diff-mode
-                                       magit-stash-mode))))
-                     '(display-buffer-same-window))
-                    ('(+magit--display-buffer-in-direction))))))
+  (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
+    (display-buffer
+     buffer (cond ((eq buffer-mode 'magit-status-mode)
+                   '(display-buffer-same-window))
+                  ((eq buffer-mode 'magit-process-mode)
+                   '(display-buffer-below-selected
+                     (window-height . (truncate (* (window-height) 0.35)))))
+                  ((and (derived-mode-p 'magit-mode)
+                        (not (memq buffer-mode
+                                   '(magit-process-mode
+                                     magit-revision-mode
+                                     magit-diff-mode
+                                     magit-stash-mode))))
+                   '(display-buffer-same-window))
+                  ('(+magit--display-buffer-in-direction))))))
 
 ;;; Major-modes
 ;;;; special-mode
@@ -2660,9 +2681,9 @@ quits any active region before exiting.  When there is no minibuffer
               "C" '("Clone indirect buffer" . my-clone-indirect-buffer-same-window)
               "s" 'save-buffer
               "d" 'kill-current-buffer
-              "k" 'kill-current-buffer
-              "r" 'revert-buffer
-              "R" 'rename-buffer
+              ;; "k" 'kill-current-buffer
+              "g" 'revert-buffer
+              "r" 'rename-buffer
               "m" 'bookmark-set
               "M" 'bookmark-delete
               "x" 'scratch-buffer))
@@ -2671,8 +2692,7 @@ quits any active region before exiting.  When there is no minibuffer
                     "i" 'imenu-list-smart-toggle))
   "s" `("search" . ,search-map)
   "p" `("project" . ,project-prefix-map)
-  "v" `("version control" . vc-prefix-map)
-  )
+  "v" `("version control" . vc-prefix-map))
 
 (my-keymap-set search-map
   "i" 'imenu)
@@ -2730,6 +2750,22 @@ quits any active region before exiting.  When there is no minibuffer
     "C-j" 'helix-paredit-down-sexp
     "C-k" 'helix-paredit-backward-up-sexp
     "C-l" 'helix-paredit-forward))
+
+;;;; occur-mode
+
+(with-eval-after-load 'replace
+  ;; Swap `o' and `C-o' keys.
+  (my-keymap-set occur-mode-map
+    "i"     'occur-edit-mode
+    "o"     'occur-mode-display-occurrence           ;; default C-o
+    "g o"   'occur-mode-goto-occurrence-other-window ;; default o
+    "C-j"   'next-error-no-select
+    "C-k"   'previous-error-no-select
+    ;; "C-c t"   'next-error-follow-minor-mode
+    "C-c m t" 'next-error-follow-minor-mode)
+  (my-keymap-set occur-edit-mode-map
+    "g o" 'occur-mode-goto-occurrence-other-window
+    "RET" 'occur-mode-goto-occurrence-other-window)) ;; default C-o
 
 ;;;; Disable Isearch keys
 
