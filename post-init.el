@@ -141,7 +141,9 @@ instead.
 ;;; Appearance
 
 (add-hook 'prog-mode-hook #'blink-cursor-mode)
+
 (global-hl-line-mode)
+(add-hook 'text-mode-hook #'my-disable-hl-line-mode)
 
 (add-hook 'prog-mode-hook
           #'(lambda ()
@@ -347,28 +349,6 @@ instead.
                 "k" 'which-key-show-keymap))
     "C-c" nil)) ;; unbind `describe-copying'
 
-;; define-key
-;; global-set-key
-
-;;;; Distinguish `TAB' from `C-i' and `RET' from `C-m'
-
-(defun helix-make-C-i-and-C-m-available ()
-  "Emacs can't distinguish `TAB' from `C-i' and `RET' from `C-m'."
-  (when (display-graphic-p) ;; do translation only in gui
-    (keymap-set input-decode-map "C-i" [C-i])
-    (keymap-set input-decode-map "C-m" [C-m])))
-
-(helix-make-C-i-and-C-m-available)
-
-;; for daemon mode
-(add-hook 'after-make-frame-functions
-          #'(lambda (frame)
-              (with-selected-frame frame
-                (helix-make-C-i-and-C-m-available))))
-
-;; (single-key-description 'C-i)
-;; (key-valid-p "<C-i>")
-;; (key-valid-p "C-<i>")
 
 ;;; Windows
 ;;;; tab-bar
@@ -768,8 +748,10 @@ instead.
 
 (leaf deadgrep
   :elpaca t
-  :config
-  ;; (keymap-global-set "<f5>" 'deadgrep)
+  :hook
+  ;; (deadgrep-mode-hook . next-error-follow-minor-mode)
+  (deadgrep-edit-mode-hook . my-disable-hl-line-mode)
+  :init
   (keymap-set search-map "d" 'deadgrep))
 
 ;;; IDE
@@ -2440,12 +2422,13 @@ Replacement for `lisp-outline-level'."
 ;;     "g g" 'beginning-of-buffer
 ;;     "G"   'end-of-buffer))
 
-(my-keymap-set special-mode-map
-  "g" nil ;; revert-buffer
-  "<" nil ;; beginning-of-buffer
-  ">" nil ;; end-of-buffer
-  "g g" 'beginning-of-buffer
-  "G"   'end-of-buffer)
+;; (my-keymap-set special-mode-map
+;;   "g" nil ;; revert-buffer
+;;   "<" nil ;; beginning-of-buffer
+;;   ">" nil ;; end-of-buffer
+;;   "g r" 'revert-buffer
+;;   "g g" 'beginning-of-buffer
+;;   "G"   'end-of-buffer)
 
 ;;;; Emacs Lisp (Elisp)
 
@@ -2465,7 +2448,6 @@ Replacement for `lisp-outline-level'."
        ;; overlap `outline-minor-mode' bindings.
        (outli-mode 1)
        (helix-paredit-mode 1)))
-
   :config
   (helix-keymap-set emacs-lisp-mode-map 'normal
     "M" '("Documentation" . helpful-at-point)
@@ -2500,11 +2482,28 @@ Replacement for `lisp-outline-level'."
 
 (leaf elisp-demos
   :elpaca t
-  :init
+  :config
   (advice-add 'describe-function-1 :after #'elisp-demos-advice-describe-function-1)
   (advice-add 'helpful-update :after #'elisp-demos-advice-helpful-update))
 
 ;;;;; xref integration for Elisp
+
+;; elisp-refs-function
+;; elisp-refs-macro
+;; elisp-refs-symbol
+;; elisp-refs-special
+;; elisp-refs-variable
+(leaf elisp-refs
+  :elpaca t
+  :after helix
+  :config
+  (my-keymap-set elisp-refs-mode-map
+    "n" 'elisp-refs-next-match
+    "N" 'elisp-refs-prev-match)
+  (dolist (cmd '(elisp-refs-visit-match
+                 elisp-refs-next-match
+                 elisp-refs-prev-match))
+    (helix-advice-add cmd :around #'helix-jump-command)))
 
 (leaf elisp-def
   :elpaca t
@@ -2607,8 +2606,8 @@ quits any active region before exiting.  When there is no minibuffer
     "g <return>" 'consult-goto-line
     "g a" 'describe-char
     "g e" 'consult-compile-error
-    "g n" 'next-error
-    "g p" 'previous-error
+    ;; "g n" 'next-error
+    ;; "g p" 'previous-error
     "g o" 'consult-outline
     "g i" 'consult-imenu
     "g I" 'consult-imenu-multi
@@ -2662,11 +2661,13 @@ quits any active region before exiting.  When there is no minibuffer
   "f" (cons "file/find"
             (define-keymap
               ;; "x" 'xref-find-apropos
+              "b" 'switch-to-buffer
               "f" 'find-file
               "F" 'consult-find
               "d" 'dired
               "l" 'locate
               "r" '("Recent files" . recentf-open)
+              "w" 'write-file
               ;; "R" 'projectile-recentf
               ;; "u" '("Sudo this file" . doom/sudo-this-file)
               ;; "U" '("Sudo find file" . doom/sudo-find-file)
@@ -2675,21 +2676,24 @@ quits any active region before exiting.  When there is no minibuffer
               ))
   "b" (cons "buffer"
             (define-keymap
-              "b" 'ibuffer-jump
               "i" 'ibuffer-jump
+              "b" 'ibuffer-jump
+              "n" 'switch-to-buffer ;; next to `b' key
               "c" '("Clone indirect buffer other window" . clone-indirect-buffer-other-window)
               "C" '("Clone indirect buffer" . my-clone-indirect-buffer-same-window)
               "s" 'save-buffer
+              "w" 'write-file
               "d" 'kill-current-buffer
-              ;; "k" 'kill-current-buffer
+              "q" 'bury-buffer
               "g" 'revert-buffer
               "r" 'rename-buffer
               "m" 'bookmark-set
               "M" 'bookmark-delete
               "x" 'scratch-buffer))
-  "o" `("open" . ,(define-keymap
-                    "t" 'treemacs
-                    "i" 'imenu-list-smart-toggle))
+  "o" (cons "open"
+            (define-keymap
+              "t" 'treemacs
+              "i" 'imenu-list-smart-toggle))
   "s" `("search" . ,search-map)
   "p" `("project" . ,project-prefix-map)
   "v" `("version control" . vc-prefix-map))
