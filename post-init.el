@@ -481,14 +481,6 @@ instead.
   (vertico-resize . 'grow-only) ;; Grow and shrink the Vertico minibuffer
   :hook (minibuffer-setup-hook . vertico-repeat-save)
   :config
-  (my-keymap-set vertico-map
-    "C-j" 'vertico-next
-    "C-k" 'vertico-previous
-    "M-j" 'previous-history-element
-    "M-k" 'next-history-element
-    ;; "<tab>"     'previous-history-element
-    ;; "<backtab>" 'next-history-element
-    )
   (dolist (state '(normal insert))
     (helix-keymap-set vertico-map state
       ;; "M-<return>" 'vertico-exit-input ;; default setting
@@ -498,8 +490,6 @@ instead.
       "C-о" 'vertico-next
       "C-л" 'vertico-previous))
   (helix-keymap-set vertico-map 'normal
-    "g j" 'vertico-next-group
-    "g k" 'vertico-previous-group
     "z j" 'vertico-next-group
     "z k" 'vertico-previous-group
     "n"   'vertico-next-group
@@ -753,6 +743,10 @@ instead.
   (deadgrep-edit-mode-hook . my-disable-hl-line-mode)
   :init
   (keymap-set search-map "d" 'deadgrep))
+
+;;;; wgrep
+
+(leaf wgrep :elpaca t)
 
 ;;; IDE
 ;;;; project.el
@@ -2184,6 +2178,9 @@ Replacement for `lisp-outline-level'."
     "k" nil ;; ibuffer-do-kill-lines
     "l" nil ;; ibuffer-redisplay
 
+    "j" 'ibuffer-forward-line
+    "k" 'ibuffer-backward-line
+
     ">" 'ibuffer-forward-next-marked
     "<" 'ibuffer-backwards-next-marked
 
@@ -2196,13 +2193,11 @@ Replacement for `lisp-outline-level'."
     "/" 'ibuffer-jump-to-buffer ;; ibuffer--filter-map
 
     "g" (define-keymap
-          "r" 'ibuffer-update ;; just use C-c b r
+          "r" 'ibuffer-do-revert
           "R" 'ibuffer-redisplay
           "d" 'ibuffer-do-delete
           "s" 'ibuffer-do-save
-
-          "j" 'ibuffer-forward-line
-          "k" 'ibuffer-backward-line)
+          "z" 'ibuffer-bury-buffer)
 
     "X" 'ibuffer-bury-buffer
     "R" 'ibuffer-do-replace-regexp
@@ -2582,24 +2577,21 @@ quits any active region before exiting.  When there is no minibuffer
   :elpaca
   pcre2el
   (helix :repo "~/code/emacs/helix")
-  :require helix keypad
+  :require helix helix-leader
   :global-minor-mode helix-mode
   :custom
   (pixel-scroll-precision-interpolation-total-time . 0.3)
+  (helix-leader-send-C-x-with-control-modifier . nil)
   :config
   (my-keymap-set global-map
-    "C-M-;" 'eval-expression ;; default to M-; but in Helix it reverse region
-    "C-M-:" 'repeat-complex-command)
-  ;; (helix-keymap-set minibuffer-local-map 'insert
-  ;;   "C-j" 'next-line-or-history-element
-  ;;   "C-k" 'previous-line-or-history-element)
+    "M-;"   'eval-expression
+    "C-M-;" 'repeat-complex-command)
   (helix-keymap-global-set 'motion
     "<backspace>" #'execute-extended-command)
   (helix-keymap-global-set 'normal
     "<backspace>" 'execute-extended-command
+    "M-;"   nil ;; helix-exchange-point-and-mark
     "C-;"   'helix-exchange-point-and-mark
-    "M-o"   'pop-to-mark-command
-    "C-S-o" 'pop-global-mark
     "z SPC" 'cycle-spacing
     "z ."   'set-fill-prefix
     ;; goto commands
@@ -2620,25 +2612,11 @@ quits any active region before exiting.  When there is no minibuffer
     )
   ;; C-w prefix
   (my-keymap-set helix-window-map
-    "N" 'other-tab-prefix
-    ;; "q" '("Kill buffer and window" . my-kill-buffer-and-window)
-    ;; "b" '("Clone indirect buffer other window" . clone-indirect-buffer-other-window)
-    ;; "B" '("Clone indirect buffer" . my-clone-indirect-buffer-same-window)
-    )
+    "N" 'other-tab-prefix)
   ;; Insert state
   (helix-keymap-global-set 'insert
     "C-w" 'backward-kill-word ;; together with C-backspace
     "C-/" 'dabbrev-expand))
-
-(leaf keypad
-  :load-path "~/code/emacs/helix"
-  :custom
-  (keypad-send-C-x-with-control-modifier . nil)
-  ;; :config
-  ;; (helix-keymap-global-set 'normal
-  ;;   "SPC" #'keypad
-  ;;   "C-h k" #'keypad-describe-key)
-  )
 
 ;;;; <leader> key
 
@@ -2684,7 +2662,7 @@ quits any active region before exiting.  When there is no minibuffer
               "s" 'save-buffer
               "w" 'write-file
               "d" 'kill-current-buffer
-              "q" 'bury-buffer
+              "z" 'bury-buffer
               "g" 'revert-buffer
               "r" 'rename-buffer
               "m" 'bookmark-set
