@@ -313,12 +313,12 @@ instead.
                                 (recentf-mode 1))))
          (kill-emacs-hook . recentf-cleanup)))
 
-;; ;; `describe-repeat-maps'
-;; (leaf repeat
-;;   :global-minor-mode repeat-mode
-;;   :custom
-;;   (repeat-exit-key . "<escape>")
-;;   (repeat-check-key . nil))
+;; `describe-repeat-maps'
+(leaf repeat
+  :global-minor-mode repeat-mode
+  :custom
+  (repeat-exit-key . "<escape>")
+  (repeat-check-key . nil))
 
 (leaf image-mode
   :custom (image-animate-loop . t))
@@ -1648,92 +1648,14 @@ HOOK should be a symbol."
    ("<backtab>" . outline-cycle-buffer))
   :defer-config
   (helix-define-advice outline-up-heading (:before (&rest _) push-mark)
-    (helix-push-point))
-
-  ;; Keybindings
-  (helix-keymap-set outline-minor-mode-map 'normal
-    "z <tab>"     'outline-cycle
-    "z <backtab>" 'outline-cycle-buffer
-    "z c" 'outline-hide-body
-    "z C" 'outline-hide-subtree
-    "z o" 'outline-show-entry
-    "z O" 'outline-show-branches
-    "z a" 'outline-toggle-children
-    "z m" 'outline-hide-sublevels
-    "z 2" (cons "Outline hide up to 2 sublevels"
-                (lambda () (interactive) (outline-hide-sublevels 2)))
-    "z r" 'outline-show-all
-    "m h"   'outline-mark-subtree ;; mark heading
-    "m i h" 'outline-mark-subtree ;; mark heading
-    "z p" '("Outline path" . outline-hide-other)
-    ;; "z >" 'outline-promote
-    ;; "z <" 'outline-demote
-    "z <return>" (cons "Outline insert heading"
-                       (lambda ()
-                         (interactive)
-                         (outline-insert-heading)
-                         (hydra-outline/body)))
-    ;;; Jump over headings
-    "z u" 'outline-up-heading
-    "z j" (cons "Outline next visible heading"
-                (lambda (count)
-                  (interactive "p")
-                  (helix-maybe-deactivate-mark)
-                  (outline-next-visible-heading count)
-                  (hydra-outline/body)))
-    "z k" (cons "Outline previous visible heading"
-                (lambda (count)
-                  (interactive "p")
-                  (helix-maybe-deactivate-mark)
-                  (outline-previous-visible-heading count)
-                  (hydra-outline/body)))
-    "z C-j" '("Outline forward same level" . hydra-outline/outline-forward-same-level)
-    "z C-k" '("Outline backward same level" . hydra-outline/outline-backward-same-level)
-    ;;; Move headings
-    "z M-j" '("Outline move subtree down" . hydra-outline/outline-move-subtree-down)
-    "z M-k" '("Outline move subtree up" . hydra-outline/outline-move-subtree-up)
-    "z M-h" '("Outline promote" . hydra-outline/outline-promote)
-    "z M-l" '("Outline demote" . hydra-outline/outline-demote))
-
-  (defhydra hydra-outline (:hint nil)
-    "
-Jump: _C-j_, _C-k_  Move: _M-h_, _M-j_, _M-k_, _M-l_
-"
-    ("C-j" outline-forward-same-level)
-    ("C-k" outline-backward-same-level)
-    ("M-j" outline-move-subtree-down)
-    ("M-k" outline-move-subtree-up)
-    ("M-h" outline-promote)
-    ("M-l" outline-demote)
-    ("<tab>" outline-cycle)
-    ("C-u" helix-smooth-scroll-up :color blue)
-    ;; Scrolling
-    ;; ("C-b" helix-smooth-scroll-page-up)
-    ;; ("C-f" helix-smooth-scroll-page-down)
-    ;; ("C-d" helix-smooth-scroll-down)
-    ;; ("C-u" helix-smooth-scroll-up)
-    ;; ("C-e" helix-mix-scroll-line-down)
-    ;; ("C-y" helix-mix-scroll-line-up)
-    ;; ("z z" helix-smooth-scroll-line-not-to-very-top)
-    ;; ("z t" helix-smooth-scroll-line-to-top)
-    ;; ("z b" helix-smooth-scroll-line-to-bottom)
-    )
-
-  ;; (leaf 'foldout
-  ;;   :config
-  ;;   (helix-keymap-set outline-mode-map 'normal
-  ;;     "z n" #'foldout-zoom-subtree
-  ;;     "z w" #'foldout-exit-fold)
-  ;;   (helix-keymap-set outline-minor-mode-map 'normal
-  ;;     "z n" #'foldout-zoom-subtree
-  ;;     "z w" #'foldout-exit-fold))
-  )
+    (helix-push-point)))
 
 (defun my-lisp-outline-level ()
   "Return outline level for comment at point.
 Replacement for `lisp-outline-level'."
   (if (match-beginning 1)
-      (- (match-end 1) (match-beginning 1))
+      (- (match-end 1)
+         (match-beginning 1))
     0))
 
 ;;;; Dired
