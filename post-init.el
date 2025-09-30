@@ -2465,8 +2465,10 @@ Replacement for `lisp-outline-level'."
   :after helix
   :config
   (my-keymap-set elisp-refs-mode-map
-    "n" 'elisp-refs-next-match
-    "N" 'elisp-refs-prev-match)
+    "C-j" 'elisp-refs-next-match
+    "C-k" 'elisp-refs-prev-match
+    "n"   'elisp-refs-next-match
+    "N"   'elisp-refs-prev-match)
   (dolist (cmd '(elisp-refs-visit-match
                  elisp-refs-next-match
                  elisp-refs-prev-match))
@@ -2708,13 +2710,7 @@ quits any active region before exiting.  When there is no minibuffer
 ;;;; occur-mode
 
 (with-eval-after-load 'replace
-  ;; Swap `o' and `C-o' keys.
   (my-keymap-set occur-mode-map
-    "i"     'occur-edit-mode
-    "o"     'occur-mode-display-occurrence           ;; default C-o
-    "g o"   'occur-mode-goto-occurrence-other-window ;; default o
-    "C-j"   'next-error-no-select
-    "C-k"   'previous-error-no-select
     ;; "C-c t"   'next-error-follow-minor-mode
     "C-c m t" 'next-error-follow-minor-mode)
   (my-keymap-set occur-edit-mode-map
