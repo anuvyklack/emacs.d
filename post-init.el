@@ -26,9 +26,22 @@
 (leaf s :elpaca t :require t)
 (leaf nerd-icons :elpaca t :require t)
 (leaf blackout :elpaca t)
-(leaf transient :elpaca t)
 (leaf casual :elpaca t)
 (leaf hydra :elpaca t)
+
+(leaf transient
+  :elpaca t
+  :custom
+  ;; Pop up transient windows at the bottom of the current window instead of
+  ;; entire frame. This is more ergonomic for users with large displays or many
+  ;; splits.
+  (transient-display-buffer-action . '(display-buffer-below-selected
+                                       (dedicated . t)
+                                       (inhibit-same-window . t)))
+  (transient-show-during-minibuffer-read . t)
+  :defer-config
+  ;; Close transient with ESC
+  (define-key transient-map [escape] #'transient-quit-one))
 
 ;; ;; Profiler
 ;; (leaf esup :elpaca t)
@@ -2337,13 +2350,42 @@ Replacement for `lisp-outline-level'."
 
 (leaf magit
   :elpaca t
+  ;; :global-minor-mode magit-auto-revert-mode
   :custom
+  ;; (magit-display-buffer-function . #'my/magit-display-buffer-fn)
   (magit-diff-refine-hunk . 'all)
-  (magit-diff-hide-trailing-cr-characters . t)
   ;; hide ^M characters at the end of a line in diffs
   (magit-diff-hide-trailing-cr-characters . t)
-  ;; (magit-display-buffer-function . #'my/magit-display-buffer-fn)
-  )
+  ;; Don't autosave repo buffers. This is too magical, and saving can
+  ;; trigger a bunch of unwanted side-effects, like save hooks and
+  ;; formatters. Trust the user to know what they're doing.
+  (magit-save-repository-buffers . nil)
+  ;; Don't display parent/related refs in commit buffers; they are rarely
+  ;; helpful and only add to runtime costs.
+  (magit-revision-insert-related-refs . nil)
+  ;; If two projects have the same project name (e.g. A/src and B/src will
+  ;; both resolve to the name "src"), Magit will treat them as the same
+  ;; project and destructively hijack each other's magit buffers. This is
+  ;; especially problematic if you use workspaces and have magit open in
+  ;; each, and the two projects happen to have the same name! By unsetting
+  ;; `magit-uniquify-buffer-names', magit uses the project's full path as
+  ;; its name, preventing such naming collisions.
+  (magit-uniquify-buffer-names . nil)
+  :hook
+  ;; Turn ref links into clickable buttons.
+  (magit-process-mode-hook . goto-address-mode)
+  ;; Reveal the point if in an invisible region.
+  (magit-diff-visit-file-hook . (lambda ()
+                                  (if (derived-mode-p 'org-mode)
+                                      (org-reveal '(4))
+                                    (require 'reveal)
+                                    (reveal-post-command))))
+  :config
+  ;; Add additional switches that seem common enough
+  (transient-append-suffix 'magit-fetch "-p"
+    '("-t" "Fetch all tags" ("-t" "--tags")))
+  (transient-append-suffix 'magit-pull "-r"
+    '("-a" "Autostash" "--autostash")))
 
 (leaf forge
   :elpaca t)
@@ -2408,6 +2450,14 @@ Replacement for `lisp-outline-level'."
                                      magit-stash-mode))))
                    '(display-buffer-same-window))
                   ('(+magit--display-buffer-in-direction))))))
+
+;;;;; magit keybindings
+
+
+
+;;;; edit-indirect
+
+(leaf edit-indirect :elpaca t)
 
 ;;; Major-modes
 ;;;; special-mode
