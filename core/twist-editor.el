@@ -4,9 +4,13 @@
 ;;; Editor
 ;;;; Minibuffer
 
-(setq enable-recursive-minibuffers t ; allow nested minibuffers
-      history-delete-duplicates t
-      resize-mini-windows 'grow-only)
+;; Allow opening new minibuffers from inside existing minibuffers.
+(setq enable-recursive-minibuffers t)
+(minibuffer-depth-indicate-mode)
+
+(setq resize-mini-windows 'grow-only
+      history-delete-duplicates t)
+
 
 ;; Keep the cursor out of the read-only portions of the minibuffer.
 (setq minibuffer-prompt-properties '( read-only t
@@ -63,6 +67,11 @@
 ;; Delete by moving to trash in interactive mode
 (setq delete-by-moving-to-trash (not noninteractive)
       remote-file-name-inhibit-delete-by-moving-to-trash t)
+
+(setq remote-file-name-inhibit-cache 50
+      tramp-default-method "ssh" ; faster than the default "scp"
+      tramp-verbose 1
+      tramp-completion-reread-directory-timeout 50)
 
 ;; Create missing directories when we open a file that doesn't exist under
 ;; a directory tree that may not exist.
@@ -205,7 +214,23 @@
       vc-make-backup-files nil ; Do not backup version controlled files.
       vc-git-diff-switches '("--histogram")) ; Faster algorithm for diffing.
 
+;; Remove RCS, CVS, SCCS, and Bzr, because it's a lot less work for vc to
+;; check them all (especially in TRAMP buffers), and who uses any of these?
+(setq vc-handled-backends . '(Git Hg SVN SRC))
+
+;; PERF: Ignore node_modules (expensive for vc ops to index).
+(setq vc-ignore-dir-regexp (format "%s\\|%s"
+                                   locate-dominating-stop-dir-regexp
+                                   "[/\\\\]node_modules"))
+
+(with-eval-after-load 'vc-annotate
+  (keymap-set vc-annotate-mode-map "<remap> <quit-window>" #'kill-current-buffer))
+
 ;;; UI
+
+(setq prettify-symbols-unprettify-at-point 'right-edge)
+
+(setq truncate-string-ellipsis "…")
 
 ;; Accept shorter responses: "y" for yes and "n" for no.
 (setq use-short-answers t
@@ -214,8 +239,6 @@
 ;; No beeping or blinking
 (setq visible-bell nil
       ring-bell-function #'ignore)
-
-(setq truncate-string-ellipsis "…")
 
 ;;;; Mouse
 
@@ -278,14 +301,12 @@
 
 ;;;; Scrolling
 
-(setq pixel-scroll-precision-interpolation-total-time 0.3)
+;; ;; Move point to top/bottom of buffer before signaling a scrolling error.
+;; (setq scroll-error-top-bottom t)
 
 ;; Enables faster scrolling. This may result in brief periods of inaccurate
 ;; syntax highlighting, which should quickly self-correct.
 (setq fast-but-imprecise-scrolling t)
-
-;; Move point to top/bottom of buffer before signaling a scrolling error.
-(setq scroll-error-top-bottom t)
 
 ;; Keep screen position if scroll command moved it vertically out of the window.
 (setq scroll-preserve-screen-position t)
@@ -303,6 +324,39 @@
 ;; Horizontal scrolling
 (setq hscroll-margin 2
       hscroll-step 1)
+
+;; Why is `jit-lock-stealth-time' nil by default?
+;; https://lists.gnu.org/archive/html/help-gnu-emacs/2022-02/msg00352.html
+(setq jit-lock-stealth-time 1.25 ; Calculate fonts when idle for 1.25 seconds
+      jit-lock-stealth-nice 0.5  ; Seconds between font locking
+      jit-lock-chunk-size 4096)
+
+;; Avoid fontification while typing
+(setq jit-lock-defer-time 0)
+(add-hook 'helix-insert-state-enter-hook (lambda () (setq jit-lock-defer-time 0.25)))
+(add-hook 'helix-insert-state-exit-hook  (lambda () (setq jit-lock-defer-time 0)))
+
+;;;;; Smooth scrolling
+
+(use-package pixel-scroll
+  :custom
+  ;; The duration of smooth scrolling.
+  (pixel-scroll-precision-interpolation-total-time 0.3)
+  (pixel-scroll-precision-large-scroll-height 20.0)
+  ;; Enable smooth scrolling with PageDown and PageUp keys
+  (pixel-scroll-precision-interpolate-page t)
+  :bind
+  ([remap scroll-up-command] . pixel-scroll-interpolate-down)
+  ([remap scroll-down-command] . pixel-scroll-interpolate-up))
+
+;;;;; Scrolling with mouse wheel and touchpad
+
+(use-package ultra-scroll
+  :ensure (ultra-scroll :host github :repo "jdtsmith/ultra-scroll")
+  :hook (elpaca-after-init-hook . ultra-scroll-mode)
+  :custom
+  (mouse-wheel-tilt-scroll t) ;; Scroll horizontally with mouse side wheel.
+  (mouse-wheel-progressive-speed nil))
 
 ;;; Text editing
 
@@ -323,5 +377,6 @@
         ;; show-paren-when-point-in-periphery t
         )
 
+;;; provide `twist-editor'
 (provide 'twist-editor)
 ;;; twist-editor.el ends here

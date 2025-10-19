@@ -14,18 +14,25 @@
 (elpaca dash)
 (elpaca f)
 (elpaca s)
-(elpaca avy)
 (elpaca pcre2el)
-;; (elpaca edit-indirect)
+(elpaca blackout (require 'blackout))
 (elpaca nerd-icons)
 
-(elpaca blackout (require 'blackout))
+(elpaca avy
+  (setq avy-keys (number-sequence ?a ?z) ;; Any lower-case letter a-z.
+        avy-style 'at-full
+        avy-all-windows nil
+        avy-all-windows-alt t
+        avy-background t
+        ;; the unpredictability of this (when enabled) makes it a poor default
+        avy-single-candidate-jump t))
 
 (use-package helix
   :ensure (helix :repo "~/code/emacs/helix"
-                 :files (:defaults "**")
-                 :wait t)
+                 :files (:defaults "**"))
   :hook (elpaca-after-init-hook . helix-mode))
+
+(elpaca-wait)
 
 (require 'twist-editor)
 

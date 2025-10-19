@@ -40,27 +40,7 @@
   :blackout t
   :hook (emacs-lisp-mode conf-space-mode conf-toml-mode fish-mode toml-ts-mode))
 
-;;;; prettify-symbols-mode
-
-(setopt prettify-symbols-unprettify-at-point t)
-
 ;;;; Scrolling
-
-;; ;; Move point to top/bottom of buffer before signaling a scrolling error.
-;; (setq scroll-error-top-bottom nil)
-
-;; Why is `jit-lock-stealth-time' nil by default?
-;; https://lists.gnu.org/archive/html/help-gnu-emacs/2022-02/msg00352.html
-(setq jit-lock-stealth-time 1.25 ; Calculate fonts when idle for 1.25 seconds
-      jit-lock-stealth-nice 0.5  ; Seconds between font locking
-      jit-lock-chunk-size 4096)
-
-(setq jit-lock-defer-time 0)
-(with-eval-after-load 'helix
-  ;; Avoid fontification while typing
-  (add-hook 'helix-insert-state-enter-hook (lambda () (setq jit-lock-defer-time 0.25)))
-  (add-hook 'helix-insert-state-exit-hook  (lambda () (setq jit-lock-defer-time 0))))
-
 ;;;;; Do not jump half the page when point goes out of the screen.
 
 (setopt scroll-conservatively 101)

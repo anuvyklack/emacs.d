@@ -25,24 +25,14 @@
 ;; This prevents native compilation from leaving temporary files in /tmp.
 (setq native-comp-async-query-on-exit t)
 
-;; Accept shorter responses: "y" for yes and "n" for no.
-(setq use-short-answers t
-      read-answer-short 'auto)
-
 ;;; User interface
 
 ;; Which Function mode
 (setq which-func-update-delay 1.0)
 
-;; No beeping or blinking
-(setq visible-bell nil
-      ring-bell-function #'ignore)
-
 ;;; Misc
 
 (setq whitespace-line-column nil)  ; Use the value of `fill-column'.
-
-(setq truncate-string-ellipsis "…")
 
 ;; Disable truncation of printed s-expressions in the message buffer.
 (setq eval-expression-print-length nil
@@ -50,10 +40,6 @@
 
 ;; Position underlines at the descent line instead of the baseline.
 (setq x-underline-at-descent-line t)
-
-(setq tramp-verbose 1)
-(setq tramp-completion-reread-directory-timeout 50)
-(setq remote-file-name-inhibit-cache 50)
 
 ;; This setting forces Emacs to save bookmarks immediately after each change.
 ;; Benefit: you never lose bookmarks if Emacs crashes.

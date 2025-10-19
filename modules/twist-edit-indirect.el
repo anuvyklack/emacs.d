@@ -9,9 +9,6 @@
 ;;
 ;;; Commentary:
 ;;
-;; WARNING: To use this module, you must install the `edit-indirect' package
-;;          as a dependency.
-;;
 ;; This module rebinds `zn' key chord to `twist-edit-indirect' command.
 ;;
 ;; It differs from `helix-narrow-to-region-indirectly' (original `zn' binding)
@@ -39,7 +36,7 @@
 (elpaca edit-indirect)
 
 (helix-keymap-global-set :state 'normal
-  "z n" 'twist-edit-indirect) ; replace `helix-narrow-to-region-indirectly'
+  "z n" 'twist-edit-region-indirect) ; replace `helix-narrow-to-region-indirectly'
 
 (with-eval-after-load 'edit-indirect
   (helix-keymap-set edit-indirect-mode-map :state 'normal
@@ -47,7 +44,7 @@
     "Z Q" #'edit-indirect-abort))
 
 ;;;###autoload
-(defun twist-edit-indirect (arg)
+(defun twist-edit-region-indirect (arg)
   "Copy region without text properties, to a separate buffer.
 With \\[universal-argument] ask which major mode to use in edit-indirect buffer.
 

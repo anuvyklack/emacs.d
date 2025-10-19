@@ -6,7 +6,6 @@
 
 (use-package helpful
   :ensure t
-  :after helix
   :hook
   (helpful-mode-hook . outline-minor-mode)
   (helpful-mode-hook . disable-hl-line-mode)

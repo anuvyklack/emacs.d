@@ -55,5 +55,8 @@
   (setopt use-package-always-ensure nil) ; Elpaca forcefully enables it.
   (elpaca-use-package-mode))
 
+(with-eval-after-load 'helix
+  (helix-set-initial-state 'elpaca-info-mode 'normal))
+
 (provide 'twist-elpaca)
 ;;; twist-elpaca.el ends here
