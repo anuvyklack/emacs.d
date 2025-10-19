@@ -9,6 +9,26 @@
 ;;; Commentary:
 ;;; Code:
 
+(require 'twist-elpaca)
+
+(elpaca dash)
+(elpaca f)
+(elpaca s)
+(elpaca avy)
+(elpaca pcre2el)
+;; (elpaca edit-indirect)
+(elpaca nerd-icons)
+
+(elpaca blackout (require 'blackout))
+
+(use-package helix
+  :ensure (helix :repo "~/code/emacs/helix"
+                 :files (:defaults "**")
+                 :wait t)
+  :hook (elpaca-after-init-hook . helix-mode))
+
+(require 'twist-editor)
+
 ;; Local variables:
 ;; byte-compile-warnings: (not obsolete free-vars)
 ;; End:

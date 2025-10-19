@@ -3,63 +3,54 @@
 ;; Author: Yuriy Artemyev
 ;; URL: https://github.com/anuvyklack/emacs-twist
 ;;
-;; Author: James Cherti
-;; URL: https://github.com/jamescherti/minimal-emacs.d
-;;
 ;; Package-Requires: ((emacs "29.1"))
 ;; Version: 0.0.1
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 ;;
 ;;; Commentary:
 ;;
-;; This file content is practically fully taken from the `minimal-emacs.d'
-;; package by James Cherti. All credit is given to the original project.
+;; early-init.el was introduced in Emacs 27.1. It is loaded before init.el,
+;; before Emacs initializes its UI or package.el, and before site files are
+;; loaded. This is great place for startup optimizing, because only here can
+;; you *prevent* things from loading, rather than turn them off after-the-fact.
+;;
+;; This file borrows a lot from James Cherti's minimal-emacs.d, which is built
+;; upon the foundation of Henrik Lissner's Doom Emacs — itself probably inspired
+;; by something else whose origins have been lost to history. All credit goes to
+;; the original projects.
 ;;
 ;;; Code:
+;; In case of error start Emacs from command line with `--debug-init' key, or
+;; uncomment:
 ;;-----------------------
-;; Start emacs from command line with `--debug-init' key, or uncomment:
-;; (setq debug-on-error t
+;; (setq init-file-debug
+;;       debug-on-error t
 ;;       debug-on-quit t)
 ;;-----------------------
 
 ;;; Garbage collector
 
-;; Delays garbage collection during startup.
-(setq gc-cons-threshold most-positive-fixnum
-      gc-cons-percentage 1.0)
+(if noninteractive                      ; in CLI sessions
+    (setq gc-cons-threshold 134217728)  ; 128mb
+  ;; Else, disable garbage collection during startup.
+  (setq-default gc-cons-threshold most-positive-fixnum))
 
-;; Restore original values after start up.
-(add-hook 'emacs-startup-hook
-          (defun twist--restore-original-gc-values ()
-            "Restore original gc values if they’re still the same as when we left them."
-            (when (= gc-cons-threshold most-positive-fixnum)
-              (dolist (var '(gc-cons-threshold
-                             gc-cons-percentage))
-                (set var (car (get var 'standard-value))))))
-          105)
+;; Enable garbage collection after start up.
+(add-hook 'emacs-startup-hook 'twist--restore-original-gc-values 105)
 
-;;; Load paths
-
-(setq load-prefer-newer t)
-
-(defvar twist-root-directory (file-name-directory load-file-name)
-  "The root directory of Twist's core files.
-Must end with a directory separator.")
-
-(setq user-emacs-directory   (expand-file-name "var/" twist-root-directory)
-      custom-theme-directory (expand-file-name "themes/" user-emacs-directory)
-      custom-file            (expand-file-name "custom.el" user-emacs-directory))
-
-(add-to-list load-path (expand-file-name "core"    twist-root-directory))
-(add-to-list load-path (expand-file-name "modules" twist-root-directory))
+(defun twist--restore-original-gc-values ()
+  "Reset `gc-cons-threshold' without user's config."
+  (when (= (default-value 'gc-cons-threshold)
+           most-positive-fixnum)
+    (setq-default gc-cons-threshold (* 16 1024 1024)))) ; 16mb
 
 ;;; Native compilation and Byte compilation
 
 (setq native-comp-warning-on-missing-source    debug-on-error
       native-comp-async-report-warnings-errors (or debug-on-error 'silent))
 
-(setq jka-compr-verbose     debug-on-error)
-(setq byte-compile-warnings debug-on-error
+(setq jka-compr-verbose     debug-on-error
+      byte-compile-warnings debug-on-error
       byte-compile-verbose  debug-on-error)
 
 ;;; Miscellaneous
@@ -91,23 +82,14 @@ Must end with a directory separator.")
 ;; Disable warnings from the legacy advice API. They aren't useful.
 (setq ad-redefinition-action 'accept)
 
-;;; Performance: Miscellaneous options
+;;; Performance
+;;;; Performance: Miscellaneous options
 
 ;; Font compacting can be very resource-intensive, especially when rendering
 ;; icon fonts on Windows. This will increase memory usage.
 (setq inhibit-compacting-font-caches t)
 
 (when (and (not (daemonp)) (not noninteractive))
-  ;; ;; The initial buffer is created during startup even in non-interactive
-  ;; ;; sessions, and its major mode is fully initialized. Modes like `text-mode',
-  ;; ;; `org-mode', or even the default `lisp-interaction-mode' load extra packages
-  ;; ;; and run hooks, which can slow down startup.
-  ;; ;;
-  ;; ;; Using `fundamental-mode' for the initial buffer to avoid unnecessary
-  ;; ;; startup overhead.
-  ;; (setq initial-major-mode 'fundamental-mode
-  ;;       initial-scratch-message nil)
-
   ;; Resizing the Emacs frame can be costly when changing the font. Disable this
   ;; to improve startup times with fonts larger than the system default.
   (setq frame-resize-pixelwise t)
@@ -149,7 +131,7 @@ Must end with a directory separator.")
     (unless (memq initial-window-system '(x pgtk))
       (setq command-line-x-option-alist nil))))
 
-;;; Performance: Inhibit redisplay
+;;;; Performance: Inhibit redisplay
 
 (unless (or (daemonp)
             noninteractive
@@ -164,7 +146,7 @@ Must end with a directory separator.")
   (setq-default inhibit-redisplay nil)
   (remove-hook 'post-command-hook 'twist--reset-inhibit-redisplay))
 
-;;; Performance: Inhibit message
+;;;; Performance: Inhibit message
 
 ;; Suppress startup messages for a cleaner experience. The tradeoff is that you
 ;; won't be informed of the progress or any relevant activities during startup.
@@ -179,7 +161,7 @@ Must end with a directory separator.")
   (setq-default inhibit-message nil)
   (remove-hook 'post-command-hook 'twist--reset-inhibit-message))
 
-;;; Performance: Disable mode-line during startup
+;;;; Performance: Disable mode-line during startup
 
 ;; Disable the mode line during startup to reduces visual clutter.
 (unless (or (daemonp)
@@ -192,7 +174,7 @@ Must end with a directory separator.")
     (with-current-buffer buf
       (setq mode-line-format nil))))
 
-;;; Restore values
+;;;; Restore values
 
 (advice-add 'startup--load-user-init-file :around 'twist--startup-load-user-init-file)
 
@@ -266,30 +248,52 @@ This variable holds a list of Emacs UI features that can be enabled:
 ;; Disable GUIs because they are inconsistent across systems, desktop
 ;; environments, and themes, and they don't match the look of Emacs.
 (unless (memq 'dialogs twist-emacs-ui-elements)
-  (setq use-file-dialog nil)
-  (setq use-dialog-box nil))
+  (setq use-file-dialog nil))
+(setq use-dialog-box (eq system-type 'android)) ; Android dialogs are better UX
 
 ;;; Security
 
-(setq gnutls-verify-error t)  ; Prompts user if there are certificate issues
-(setq tls-checktrust t)  ; Ensure SSL/TLS connections undergo trust verification
-(setq gnutls-min-prime-bits 3072)  ; Stronger GnuTLS encryption
+(setq gnutls-verify-error t) ; Prompts user if there are certificate issues.
+(setq tls-checktrust t) ; Ensure SSL/TLS connections undergo trust verification.
+(setq gnutls-min-prime-bits 3072) ; Stronger GnuTLS encryption.
 
 ;;; package.el
 
-(setq use-package-compute-statistics debug-on-error)
-
-;; Setting use-package-expand-minimally to (t) results in a more compact output
-;; that emphasizes performance over clarity.
-(setq use-package-expand-minimally (not debug-on-error))
-
-(setq use-package-minimum-reported-time (if debug-on-error 0 0.1))
-(setq use-package-verbose debug-on-error)
-
-(setq use-package-enable-imenu-support t)
-
-;; Disable built-in package manager.
+;; Do not load built-in package manager.
 (setq package-enable-at-startup nil)
+
+;; Ensure that, if the user does want package.el, it is configured correctly.
+(setq package-archives '(("melpa"  . "https://melpa.org/packages/")
+                         ("gnu"    . "https://elpa.gnu.org/packages/")
+                         ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+(setq package-archive-priorities '(("gnu"    . 99)
+                                   ("nongnu" . 80)
+                                   ("melpa"  . 70)))
+
+;;; use-package
+
+(setq use-package-compute-statistics debug-on-error
+      ;; Setting use-package-expand-minimally to (t) results in a more compact
+      ;; output that emphasizes performance over clarity.
+      use-package-expand-minimally (not debug-on-error)
+      use-package-minimum-reported-time (if debug-on-error 0 0.1)
+      use-package-verbose debug-on-error
+      use-package-enable-imenu-support t)
+
+;;; Load paths
+
+(setq load-prefer-newer t)
+
+(defvar twist-root-directory (file-name-directory load-file-name)
+  "The root directory of Twist's core files.
+Must end with a directory separator.")
+
+(setq user-emacs-directory   (expand-file-name "var/" twist-root-directory)
+      custom-theme-directory (expand-file-name "themes/" user-emacs-directory)
+      custom-file            (expand-file-name "custom.el" user-emacs-directory))
+
+(add-to-list load-path (expand-file-name "core"    twist-root-directory))
+(add-to-list load-path (expand-file-name "modules" twist-root-directory))
 
 ;; Local variables:
 ;; byte-compile-warnings: (not obsolete free-vars)

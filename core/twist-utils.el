@@ -11,5 +11,16 @@
         (ignore-errors
           (eval (car orig-val-expr))))))
 
+(defun twist-common-indentation ()
+  "Return the common indentation off all lines in the buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((indentation 0))
+      (while (not (eobp))
+        (unless (s-blank-str? (thing-at-point 'line))
+          (cl-callf min indentation (current-indentation)))
+        (forward-line))
+      indentation)))
+
 (provide 'twist-utils)
 ;;; twist-utils.el ends here
