@@ -94,7 +94,7 @@ already an edit-indirect buffer active overlapping any portion of region, an
 (add-hook 'edit-indirect-before-commit-hook  #'twist-edit-indirect--indent)
 
 (defun twist-edit-indirect--dedent ()
-  (setq-local twist-edit-indirect--intentation (twist-common-indentation))
+  (setq-local twist-edit-indirect--intentation (+common-indentation))
   (save-excursion
     (indent-rigidly (point-min) (point-max)
                     (- twist-edit-indirect--intentation))))

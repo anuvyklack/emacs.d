@@ -2,23 +2,31 @@
 ;;; Commentary:
 ;;; Code:
 
-(keymap-unset help-map "h" :remove) ; unbind `view-hello-file'
+;; Enhance `apropos' and related functions to perform more extensive searches
+(setq apropos-do-all t)
+
+(use-package help
+  :hook
+  (help-mode-hook . disable-hl-line-mode)
+  :custom
+  (help-enable-autoload nil)
+  (help-enable-completion-autoload nil)
+  (help-enable-symbol-autoload nil)
+  (help-window-select t) ; Focus new help windows when opened
+  :config
+  (keymap-unset help-map "h" t)    ; unbind `view-hello-file'
+  (keymap-unset help-map "C-c" t)) ; unbind `describe-copying'
 
 (use-package helpful
   :ensure t
   :hook
-  (helpful-mode-hook . outline-minor-mode)
+  ;; (helpful-mode-hook . outline-minor-mode)
   (helpful-mode-hook . disable-hl-line-mode)
-  (help-mode-hook . disable-hl-line-mode)
-  :custom
-  (help-window-select t)
   :bind (([remap describe-function] . helpful-callable)
          ([remap describe-variable] . helpful-variable)
          ([remap describe-command] . helpful-command)
          ([remap describe-key] . helpful-key)
-         ([remap describe-symbol] . helpful-symbol))
-  ;; :config
-  )
+         ([remap describe-symbol] . helpful-symbol)))
 
 (helix-keymap-set help-map
   "F" 'describe-face
@@ -34,8 +42,7 @@
               "m" 'which-key-show-major-mode
               "t" 'which-key-show-top-level
               "f" 'which-key-show-full-keymap
-              "k" 'which-key-show-keymap))
-  "C-c" nil) ; unbind `describe-copying'
+              "k" 'which-key-show-keymap)))
 
 (provide 'twist-help)
 ;;; twist-help.el ends here

@@ -1,34 +1,42 @@
-;;; twist-dired.el --- -*- lexical-binding: t -*-
+;;; twist-dired.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 
-(use-package dired
-  :commands (dired dired-jump)
-  :custom
-  ;; -l               :: use a long listing format
-  ;; -a, --all        :: do not ignore entries starting with `.'
-  ;; -A, --almost-all :: do not list implied `.' and `..'
-  ;; -F, --classify   :: append indicator (one of /=>@|) to entries
-  ;; -v               :: natural sort of (version) numbers within text
-  (dired-listing-switches . "-lAhF -v --group-directories-first")
-  (dired-free-space nil)
-  (dired-kill-when-opening-new-dired-buffer . t)
-  (dired-dwim-target t)  ; Propose a target for intelligent moving/copying
-  (delete-by-moving-to-trash . t)
-  (dired-deletion-confirmer 'y-or-n-p)
-  (dired-recursive-deletes 'top)
-  (dired-recursive-copies 'always)
-  (dired-vc-rename-file t)
-  (dired-create-destination-dirs 'ask)
-  (dired-auto-revert-buffer . #'dired-buffer-stale-p)
-  (dired-no-confirm . t)
-  (dired-clean-confirm-killing-deleted-buffers nil)
-  (dired-maybe-use-globstar . t))
+;; -l               -- use a long listing format
+;; -a, --all        -- do not ignore entries starting with `.'
+;; -A, --almost-all -- do not list implied `.' and `..'
+;; -F, --classify   -- append indicator (one of /=>@|) to entries
+;; -v               -- natural sort of (version) numbers within text
+(setq dired-listing-switches "-lAhF -v --group-directories-first")
+;; (setq dired-free-space nil)
+
+(setq dired-kill-when-opening-new-dired-buffer t
+      dired-dwim-target t  ; Propose a target for intelligent moving/copying
+      delete-by-moving-to-trash t
+      dired-deletion-confirmer 'y-or-n-p
+      dired-recursive-deletes 'top
+      dired-recursive-copies 'always
+      dired-vc-rename-file t
+      dired-create-destination-dirs 'ask
+      auto-revert-remote-files nil
+      dired-auto-revert-buffer #'dired-buffer-stale-p
+      dired-no-confirm t
+      dired-clean-confirm-killing-deleted-buffers nil
+      dired-maybe-use-globstar t)
+
+;; dired-omit-mode
+(setq dired-omit-verbose nil
+      dired-omit-files (concat "\\`[.]\\'"))
 
 (use-package dired-filter
   :ensure t
   :custom
   (dired-filter-verbose nil))
+
+(use-package ls-lisp
+  :custom
+  (ls-lisp-verbosity nil)
+  (ls-lisp-dirs-first t))
 
 ;;; dired filter
 

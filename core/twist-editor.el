@@ -1,6 +1,9 @@
 ;;; twist-editor.el --- defaults for text editing -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
+(require 'xdg)
+(require 'dash)
+
 ;;; Editor
 ;;;; Minibuffer
 
@@ -11,7 +14,6 @@
 (setq resize-mini-windows 'grow-only
       history-delete-duplicates t)
 
-
 ;; Keep the cursor out of the read-only portions of the minibuffer.
 (setq minibuffer-prompt-properties '( read-only t
                                       intangible t
@@ -19,9 +21,13 @@
                                       face minibuffer-prompt))
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
-;; Save minibuffer history between sessions.
+;;;;; Save minibuffer history between sessions
+
 (use-package savehist
-  :hook (after-init-hook . savehist-mode)
+  :hook
+  (after-init-hook . savehist-mode)
+  (savehist-save-hook . twist-savehist-unpropertize-variables-h)
+  (savehist-save-hook . twist-savehist-remove-unprintable-registers-h)
   :custom
   (history-length 300)
   (savehist-additional-variables '(kill-ring
@@ -30,6 +36,26 @@
                                    register-alist
                                    search-ring
                                    regexp-search-ring)))
+
+(defun twist-savehist-unpropertize-variables-h ()
+  "Remove text properties from `kill-ring' to reduce savehist cache size."
+  (setq kill-ring (-> kill-ring
+                      (-filter #'stringp)
+                      (-map #'substring-no-properties)))
+  (setq register-alist (-map (-lambda ((reg . item))
+                               (if (stringp item)
+                                   (cons reg (substring-no-properties item))
+                                 (cons reg item)))
+                             register-alist)))
+
+(defun twist-savehist-remove-unprintable-registers-h ()
+  "Remove unwriteable registers (e.g. containing window configurations).
+Otherwise, `savehist' would discard `register-alist' entirely if we don't omit
+the unwritable tidbits."
+  ;; Save new value in the temp buffer savehist is running
+  ;; `savehist-save-hook' in. We don't want to actually remove the
+  ;; unserializable registers in the current session!
+  (setq-local register-alist (-filter #'savehist-printable register-alist)))
 
 ;;;; Buffers
 
@@ -46,12 +72,6 @@
 ;;       initial-scratch-message nil)
 
 ;; (substitute-command-keys initial-scratch-message)
-
-;;;; Undo/redo
-
-(setq undo-limit (* 13 160000)
-      undo-strong-limit (* 13 240000)
-      undo-outer-limit (* 13 24000000))
 
 ;;;; Files
 
@@ -171,12 +191,13 @@
   (auto-revert-verbose t) ; let us know when it happens
   (auto-revert-use-notify nil)
   (auto-revert-stop-on-user-input nil)
-  (global-auto-revert-non-file-buffers t) ; e.g, Dired
-  (global-auto-revert-ignore-modes '(Buffer-menu-mode))
   ;; Only prompts for confirmation when buffer is unsaved.
-  (revert-without-query (list ".")))
+  (revert-without-query (list "."))
+  (global-auto-revert-non-file-buffers t) ; e.g, Dired
+  (global-auto-revert-ignore-modes '(ibuffer-mode
+                                     Buffer-menu-mode)))
 
-;;;;; Save list of opened files and places in them
+;;;;; Keep track of recently opened files and places in them
 
 ;; Keep track of opened files.
 (use-package recentf
@@ -189,7 +210,15 @@
   ;; Auto clean up recent files only in long-running daemon sessions, else
   ;; do it on quiting Emacs.
   (setopt recentf-auto-cleanup (if (daemonp) 300))
-  (add-hook 'kill-emacs-hook #'recentf-cleanup))
+  (add-hook 'kill-emacs-hook #'recentf-cleanup)
+
+  ;; Don't remember files in runtime folders.
+  (add-to-list 'recentf-exclude
+               (concat "^" (regexp-quote (or (xdg-runtime-dir) "/run"))))
+
+  ;; PERF: Text properties inflate the size of recentf's files, and there is no
+  ;;   reason to persist them (must be first in `recentf-filename-handlers'!)
+  (add-to-list 'recentf-filename-handlers #'substring-no-properties))
 
 ;; Save the last location within a file upon reopening.
 (use-package saveplace
@@ -262,7 +291,7 @@
 ;;;; Line numbers
 
 (use-package display-line-numbers
-  :hook prog-mode text-mode conf-mode
+  :hook prog-mode-hook text-mode-hook conf-mode-hook
   :custom
   (display-line-numbers-width 3)
   (display-line-numbers-type t)
@@ -274,10 +303,18 @@
 
 ;;;; Fringes
 
-;; Reduce the clutter in the fringes; we'd like to reserve that space for more
-;; useful information, like diff-hl and flycheck.
+;; Disable visual indicators in the fringe for buffer boundaries and empty lines.
 (setq indicate-buffer-boundaries nil
       indicate-empty-lines nil)
+
+(setq-default left-fringe-width  8
+              right-fringe-width 8)
+
+;;;; Modeline
+
+;; Show (line,column) indicator in modeline.
+(add-hook 'after-init-hook #'line-number-mode)
+(add-hook 'after-init-hook #'column-number-mode)
 
 ;;;; Windows
 
@@ -325,6 +362,9 @@
 (setq hscroll-margin 2
       hscroll-step 1)
 
+;; Disable auto-adding a new line at the bottom when scrolling.
+(setq next-line-add-newlines nil)
+
 ;; Why is `jit-lock-stealth-time' nil by default?
 ;; https://lists.gnu.org/archive/html/help-gnu-emacs/2022-02/msg00352.html
 (setq jit-lock-stealth-time 1.25 ; Calculate fonts when idle for 1.25 seconds
@@ -359,12 +399,57 @@
   (mouse-wheel-progressive-speed nil))
 
 ;;; Text editing
+;;;; Miscellaneous
 
-;; Disable auto-adding a new line at the bottom when scrolling.
-(setq next-line-add-newlines nil)
-
-;; Remove duplicates from the kill ring to reduce clutter
+;; Remove duplicates from the kill ring to reduce clutter.
 (setq kill-do-not-save-duplicates t)
+
+;;;; Undo/redo
+
+(setq undo-limit (* 13 160000)
+      undo-strong-limit (* 13 240000)
+      undo-outer-limit (* 13 24000000))
+
+;;;; Formatting
+
+(setq-default fill-column 80)
+
+;; Prefer spaces over tabs.
+(setq-default indent-tabs-mode nil
+              tab-width 4)
+
+;; Only indent the line when at BOL or in a line's indentation. Anywhere else,
+;; insert literal indentation.
+(setq-default tab-always-indent 'complete
+              tab-first-completion 'word)
+
+;; Make `tabify' and `untabify' only affect indentation. Not tabs/spaces in the
+;; middle of a line.
+(setq tabify-regexp "^\t* [ \t]+")
+
+;; Continue wrapped words at whitespace, rather than in the middle of a word.
+(setq-default word-wrap t)
+;; ...but don't do any wrapping by default. It's expensive. Enable
+;; `visual-line-mode' if you want soft line-wrapping. `auto-fill-mode' for hard
+;; line-wrapping.
+(setq-default truncate-lines t)
+;; If enabled (and `truncate-lines' was disabled), soft wrapping no longer
+;; occurs when that window is less than `truncate-partial-width-windows'
+;; characters wide. We don't need this, and it's extra work for Emacs otherwise,
+;; so off it goes.
+(setq truncate-partial-width-windows nil)
+
+;; This was a widespread practice in the days of typewriters, but it is obsolete
+;; nowadays.
+(setq sentence-end-double-space nil)
+
+;; The POSIX standard defines a line is "a sequence of zero or more non-newline
+;; characters followed by a terminating newline".
+(setq require-final-newline t)
+
+;; Default to soft line-wrapping in text modes. It is more sensibile for text
+;; modes, even if hard wrapping is more performant.
+(add-hook 'text-mode-hook #'visual-line-mode)
 
 ;;;; Parens
 
@@ -376,6 +461,38 @@
         ;; show-paren-when-point-inside-paren t
         ;; show-paren-when-point-in-periphery t
         )
+
+;;;; Extra file extensions to support
+
+(add-to-list 'auto-mode-alist '("/LICENSE\\'" . text-mode))
+(add-to-list 'auto-mode-alist '("rc\\'" . conf-mode) 'append)
+
+;;;; Editing files with very long lines
+
+(use-package so-long
+  :ensure t
+  :hook (emacs-startup-hook . global-so-long-mode)
+  :config
+  ;; Don't disable syntax highlighting and line numbers, or make the buffer
+  ;; read-only, in `so-long-minor-mode', so we can have a basic editing
+  ;; experience in them, at least. It will remain off in `so-long-mode',
+  ;; however, because long files have a far bigger impact on Emacs performance.
+  (cl-callf2 delq 'font-lock-mode so-long-minor-modes)
+  (cl-callf2 delq 'display-line-numbers-mode so-long-minor-modes)
+  (setf (alist-get 'buffer-read-only so-long-variable-overrides nil t) nil)
+  ;; ...but at least reduce the level of syntax highlighting
+  (add-to-list 'so-long-variable-overrides '(font-lock-maximum-decoration . 1))
+  ;; ...and insist that save-place not operate in large/long files
+  (add-to-list 'so-long-variable-overrides '(save-place-alist . nil))
+  ;; But disable everything else that may be unnecessary/expensive for large or
+  ;; wide buffers.
+  (cl-callf append so-long-minor-modes '(eldoc-mode
+                                         auto-composition-mode
+                                         hl-fill-column-mode
+                                         spell-fu-mode
+                                         undo-tree-mode
+                                         ws-butler-mode
+                                         highlight-indent-guides-mode)))
 
 ;;; provide `twist-editor'
 (provide 'twist-editor)
