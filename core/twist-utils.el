@@ -32,7 +32,7 @@ HOOK should be a symbol."
                        (buffer-local-value hook (current-buffer)))
               (default-value hook))
     ;; else
-    (symbol-value hook)))
+    (ensure-list (symbol-value hook))))
 
 (provide 'twist-utils)
 ;;; twist-utils.el ends here

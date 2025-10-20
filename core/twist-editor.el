@@ -290,10 +290,28 @@ the unwritable tidbits."
 
 ;; I anable blinking cursor, but it may interferes with cursor settings in some
 ;; minor modes that try to change it buffer-locally (e.g., Treemacs).
-(blink-cursor-mode 1)
+(blink-cursor-mode)
 
 ;; Do not extend the cursor to fit wide characters.
 (setq x-stretch-cursor nil)
+
+;;;; Current line highlight
+
+;; I want current line highlighting in special modes and don't want in text
+;; editing modes because it interferes with Helix selections. However I use
+;; `global-hl-line-mode' because the local `hl-line-mode' works unreliably: the
+;; highlighting is missing in Ibuffer when you switch to it, and you have to
+;; move the cursor to make it appear. Then it disappears again after auto
+;; revert, and you need to move once more — very annoying.
+(global-hl-line-mode)
+
+(defun twist-disable-hl-line-mode ()
+  "Disable `global-hl-line-mode' locally in current buffer."
+  (setq-local global-hl-line-mode nil)
+  (global-hl-line-unhighlight))
+
+(add-hook 'text-mode-hook #'twist-disable-hl-line-mode)
+(add-hook 'prog-mode-hook #'twist-disable-hl-line-mode)
 
 ;;;; Line numbers
 
