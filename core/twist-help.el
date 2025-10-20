@@ -1,32 +1,50 @@
 ;;; twist-help.el -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
+(require 'helix-core)
 
 ;; Enhance `apropos' and related functions to perform more extensive searches
 (setq apropos-do-all t)
 
 (use-package help
   :hook
-  (help-mode-hook . disable-hl-line-mode)
+  (help-mode-hook . twist-disable-hl-line-mode)
   :custom
   (help-enable-autoload nil)
   (help-enable-completion-autoload nil)
   (help-enable-symbol-autoload nil)
   (help-window-select t) ; Focus new help windows when opened
   :config
-  (keymap-unset help-map "h" t)    ; unbind `view-hello-file'
-  (keymap-unset help-map "C-c" t)) ; unbind `describe-copying'
+  (helix-keymap-set help-map
+    "h"   nil   ; unbind `view-hello-file'
+    "C-c" nil)) ; unbind `describe-copying'
 
 (use-package helpful
   :ensure t
+  :defer t
   :hook
   ;; (helpful-mode-hook . outline-minor-mode)
-  (helpful-mode-hook . disable-hl-line-mode)
+  (helpful-mode-hook . twist-disable-hl-line-mode)
   :bind (([remap describe-function] . helpful-callable)
          ([remap describe-variable] . helpful-variable)
          ([remap describe-command] . helpful-command)
          ([remap describe-key] . helpful-key)
-         ([remap describe-symbol] . helpful-symbol)))
+         ([remap describe-symbol] . helpful-symbol))
+  :config
+  ;; Open links to functions, variables and symbols in helpful buffer in the
+  ;; same window.
+  (add-to-list 'display-buffer-alist
+               '((derived-mode . helpful-mode)
+                 (display-buffer-reuse-mode-window display-buffer-pop-up-window)
+                 (mode . helpful-mode)
+                 (body-function . select-window))))
+
+;;; Keybindings
+
+;; Vim uses `K' but it is occupied in Helix. `M' is near `K' and it is free.
+(dolist (keymap (list emacs-lisp-mode-map lisp-data-mode-map))
+  (helix-keymap-set keymap :state 'normal
+    "M" #'helpful-at-point))
 
 (helix-keymap-set help-map
   "F" 'describe-face
