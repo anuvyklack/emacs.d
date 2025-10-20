@@ -1,7 +1,6 @@
 ;;; config.el --- -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;; Commentary:
 ;;; Code:
-
 (require 'dash)
 
 ;;; Appearance
@@ -58,41 +57,39 @@
   (let ((scroll-conservatively (my-original-value 'scroll-conservatively)))
     (apply fun args)))
 
+;;; Minibuffer & Completion
+
+(use-package vertico
+  :config
+  (helix-keymap-set vertico-map :state '(normal insert)
+    ;; "M-<return>" 'vertico-exit-input ;; default setting
+    "C-p" #'consult-yank-from-kill-ring
+    ;; Russian
+    "C-о" 'vertico-next
+    "C-л" 'vertico-previous))
+
 ;;; Keybindings
 
-;; (use-package helix-leader
-;;   :custom
-;;   (helix-leader-send-C-x-with-control-modifier nil))
+(use-package helix-leader
+  :custom
+  (helix-leader-send-C-x-with-control-modifier nil))
 
-(with-eval-after-load 'helix
-  (helix-keymap-global-set
-    "M-;"   'eval-expression
-    "C-M-;" 'repeat-complex-command)
-  (helix-keymap-global-set :state 'motion
-    "<backspace>" #'execute-extended-command)
-  (helix-keymap-global-set :state 'normal
-    "<backspace>" 'execute-extended-command
-    "M-;"   nil ;; helix-exchange-point-and-mark
-    "C-;"   'helix-exchange-point-and-mark
-    "z SPC" 'cycle-spacing
-    "z ."   'set-fill-prefix
-    ;; goto commands
-    "g <return>" 'consult-goto-line
-    "g e" 'consult-compile-error
-    ;; "g n" 'next-error
-    ;; "g p" 'previous-error
-    ;; "g /" 'consult-ripgrep
-    ;; "g /" 'consult-line
-    ;; "g ?" 'consult-line-multi
-    ;; "g -" 'dired-jump
-    )
-  ;; C-w prefix
-  (helix-keymap-set helix-window-map
-    "N" 'other-tab-prefix)
-  ;; Insert state
-  (helix-keymap-global-set :state 'insert
-    "C-w" 'backward-kill-word ;; together with C-backspace
-    "C-/" 'dabbrev-expand))
+(helix-keymap-global-set
+  "M-;"   'eval-expression
+  "C-M-;" 'repeat-complex-command)
+(helix-keymap-global-set :state 'motion
+  "<backspace>" #'execute-extended-command)
+(helix-keymap-global-set :state 'normal
+  "<backspace>" 'execute-extended-command
+  "M-;"   nil ;; helix-exchange-point-and-mark
+  "C-;"   'helix-exchange-point-and-mark)
+;; C-w prefix
+(helix-keymap-set helix-window-map
+  "N" 'other-tab-prefix)
+;; Insert state
+(helix-keymap-global-set :state 'insert
+  "C-w" 'backward-kill-word ;; together with C-backspace
+  "C-/" 'dabbrev-expand)
 
 ;;; Provide `config'
 (provide 'config)

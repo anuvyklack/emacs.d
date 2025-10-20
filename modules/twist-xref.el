@@ -9,13 +9,14 @@
   (xref-auto-jump-to-first-definition 'show)
   (xref-prompt-for-identifier nil)
   (xref-history-storage #'xref-window-local-history)
+  ;; Enable completion in the minibuffer instead of the definitions buffer.
+  ;; You can use `embark-export' to export minibuffer content to xref buffer.
+  (xref-show-definitions-function #'xref-show-definitions-completing-read)
+  (xref-show-xrefs-function #'xref-show-definitions-completing-read)
+
   ;; (xref-show-definitions-function #'xref-show-definitions-buffer-at-bottom)
   ;; (xref-show-definitions-function #'xref-show-definitions-buffer)
   ;; (xref-show-xrefs-function #'xref--show-xref-buffer)
-
-  ;; Enable completion in the minibuffer instead of the definitions buffer
-  (xref-show-definitions-function #'xref-show-definitions-completing-read)
-  (xref-show-xrefs-function #'xref-show-definitions-completing-read)
   :config
   (advice-add 'xref-find-definitions :around '+xref-try-all-backends-a)
   (advice-add 'xref-find-references  :around '+xref-try-all-backends-a))
@@ -37,8 +38,8 @@
     (cl-dolist (backend (+hook-values 'xref-backend-functions))
       (ignore-error user-error
         (let ((xref-backend-functions (list backend)))
-          (apply orig-fun args)
-          (when jumped (cl-return)))))))
+          (apply orig-fun args)))
+      (when jumped (cl-return)))))
 
 (provide 'twist-xref)
 ;;; twist-xref.el ends here

@@ -34,6 +34,8 @@
 
 (elpaca-wait)
 
+(elpaca imenu-list)
+
 (require 'twist-editor)
 
 ;; Local variables:

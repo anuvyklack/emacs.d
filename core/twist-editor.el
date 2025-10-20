@@ -237,6 +237,13 @@ the unwritable tidbits."
 ;; Prevent truncation of long function names in `imenu' listings.
 (setq imenu-max-item-length 160)
 
+;;;; Completion
+
+;; Ignore cases
+(setq completion-ignore-case t
+      read-file-name-completion-ignore-case t
+      read-buffer-completion-ignore-case t)
+
 ;;;; VC
 
 (setq vc-git-print-log-follow t
@@ -395,7 +402,7 @@ the unwritable tidbits."
   :ensure (ultra-scroll :host github :repo "jdtsmith/ultra-scroll")
   :hook (elpaca-after-init-hook . ultra-scroll-mode)
   :custom
-  (mouse-wheel-tilt-scroll t) ;; Scroll horizontally with mouse side wheel.
+  (mouse-wheel-tilt-scroll t) ; Scroll horizontally with mouse side wheel.
   (mouse-wheel-progressive-speed nil))
 
 ;;; Text editing
