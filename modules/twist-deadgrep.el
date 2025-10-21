@@ -20,7 +20,7 @@
   (helix-keymap-set deadgrep-mode-map :state 'motion
     "i"   'deadgrep-edit-mode
 
-    "a"   'deadgrep-incremental ;; `a' for amend
+    "a"   'deadgrep-incremental ; `a' for amend
     "g r" 'deadgrep-restart
 
     "RET" 'deadgrep-visit-result-other-window
@@ -51,22 +51,6 @@
     "o"   'undefined
     "O"   'undefined
     "J"   'undefined))
-
-;;; Advices
-
-(helix-advice-add 'deadgrep-mode :before #'helix-deactivate-mark-a)
-(helix-advice-add 'deadgrep-mode :before #'helix-delete-all-fake-cursors)
-
-(dolist (cmd '(deadgrep-visit-result
-               deadgrep-visit-result-other-window))
-  (helix-advice-add cmd :around #'helix-jump-command-a))
-
-(add-hook 'deadgrep-mode-hook
-          (defun helix--deadgrep-mode-hook ()
-            ;; TODO: upstream this
-            (setq-local revert-buffer-function
-                        (lambda (_ignore-auto _noconfirm)
-                          (deadgrep-restart)))))
 
 ;;; Commands
 

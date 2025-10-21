@@ -1,31 +1,36 @@
 ;;; twist-keybindings.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
+(elpaca imenu-list)
+
+(helix-keymap-global-set :state 'insert
+  "C-/" 'hippie-expand)
 
 (helix-keymap-global-set :state 'normal
   "z SPC" 'cycle-spacing
   "z ."   'set-fill-prefix)
 
-;; <leader> key
+;; <leader>
 (helix-keymap-set mode-specific-map
   "RET" 'bookmark-jump
   "," 'switch-to-buffer
-  "/" 'consult-ripgrep
+  "/" 'consult-ripgrep ; "/" is bound to search in Helix
   "d" 'dired-jump
   "b" (cons "buffer"
             (define-keymap
-              "i" 'ibuffer-jump
-              "b" 'ibuffer-jump
-              "n" 'switch-to-buffer ;; next to `b' key
+              ;; Buffer
+              "b" 'ibuffer-jump        ; "<leader> bb"
+              "n" 'switch-to-buffer    ; next after "b"
               "s" 'save-buffer
               "w" 'write-file
-              "d" 'kill-current-buffer
-              "z" 'bury-buffer
-              "g" 'revert-buffer
+              "d" 'kill-current-buffer ; also "C-w d"
+              "z" 'bury-buffer         ; also "C-w z"
+              "g" 'revert-buffer       ; also "C-w r"
               "r" 'rename-buffer
+              "x" 'scratch-buffer
+              ;; Bookmakrs
               "m" 'bookmark-set
-              "M" 'bookmark-delete
-              "x" 'scratch-buffer))
+              "M" 'bookmark-delete))
   "o" (cons "open"
             (define-keymap
               "t" 'treemacs
@@ -39,6 +44,7 @@
   "C-x C-r" 'recentf-open ; override `find-file-read-only'
   "C-x C-d" 'dired-jump)  ; override `list-directory'
 
+;; <leader> s
 (helix-keymap-set search-map
   "i" 'imenu)
 

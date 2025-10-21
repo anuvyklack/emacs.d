@@ -6,6 +6,10 @@
 
 ;;; Editor
 
+;; Ask the user whether to terminate asynchronous compilations on exit.
+;; This prevents native compilation from leaving temporary files in /tmp.
+(setq native-comp-async-query-on-exit t)
+
 ;; This setting forces Emacs to save bookmarks immediately after each change.
 ;; Benefit: you never lose bookmarks if Emacs crashes.
 (setq bookmark-save-flag 1)
@@ -254,6 +258,22 @@ the unwritable tidbits."
       read-file-name-completion-ignore-case t
       read-buffer-completion-ignore-case t)
 
+;;;;; hippie-expand
+
+(use-package hippie-exp
+  :custom
+  (hippie-expand-try-functions-list '( try-expand-dabbrev
+                                       try-expand-dabbrev-all-buffers
+                                       try-expand-dabbrev-from-kill
+                                       try-complete-file-name-partially
+                                       try-complete-file-name
+                                       try-expand-all-abbrevs
+                                       try-expand-list
+                                       try-expand-line
+                                       try-complete-lisp-symbol-partially
+                                       try-complete-lisp-symbol))
+  :bind ([remap dabbrev-expand] . hippie-expand))
+
 ;;;; Comint (general command interpreter in a window)
 
 (setq ansi-color-for-comint-mode t
@@ -265,6 +285,15 @@ the unwritable tidbits."
 (setq compilation-ask-about-save nil
       compilation-always-kill t
       compilation-scroll-output 'first-error)
+
+;;;; Eldoc
+
+(blackout 'eldoc-mode)
+
+;;;; occur-mode
+
+;; Create separate *Occur* buffer for each search.
+(add-hook 'occur-hook 'occur-rename-buffer)
 
 ;;;; VC
 
@@ -336,7 +365,7 @@ the unwritable tidbits."
 (global-hl-line-mode)
 
 (defun twist-disable-hl-line-mode ()
-  "Disable `global-hl-line-mode' locally in current buffer."
+  "Disable `global-hl-line-mode' in current buffer."
   (setq-local global-hl-line-mode nil)
   (global-hl-line-unhighlight))
 
@@ -516,6 +545,27 @@ the unwritable tidbits."
         ;; show-paren-when-point-inside-paren t
         ;; show-paren-when-point-in-periphery t
         )
+
+;;;; Prog-mode
+
+(defun twist-show-trailing-whitespace ()
+  "Highlight trailing whitespaces with `trailing-whitespace' face.
+Use `delete-trailing-whitespace' command."
+  (setq-local show-trailing-whitespace t))
+
+;; TODO: report BUG in `display-fill-column-indicator-mode': 2 strings
+;;   are compared with `eq' instead of `equal' and result is always nil.
+(defun twist-show-fill-column-indicator ()
+  "Display `fill-column' indicator."
+  (setq-local display-fill-column-indicator t
+              display-fill-column-indicator-character ?\u2502))
+
+(add-hook 'prog-mode-hook 'twist-show-trailing-whitespace)
+(add-hook 'prog-mode-hook 'twist-show-fill-column-indicator)
+
+(use-package rainbow-delimiters
+  :ensure t
+  :hook prog-mode conf-mode)
 
 ;;;; Extra file extensions to support
 

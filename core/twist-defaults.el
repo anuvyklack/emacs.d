@@ -17,14 +17,6 @@
 ;; All credit is given to the original projects.
 ;;
 ;;; Code:
-
-;; ;; Ensure use-package is available
-;; (require 'use-package)
-
-;; Ask the user whether to terminate asynchronous compilations on exit.
-;; This prevents native compilation from leaving temporary files in /tmp.
-(setq native-comp-async-query-on-exit t)
-
 ;;; User interface
 
 ;; Which Function mode

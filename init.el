@@ -35,7 +35,6 @@
 
 (elpaca blackout (require 'blackout))
 (elpaca nerd-icons)
-(elpaca imenu-list)
 (elpaca wgrep)
 
 (require 'twist-editor)
