@@ -211,10 +211,9 @@ the unwritable tidbits."
 
 ;; Keep track of opened files.
 (use-package recentf
-  :hook (after-init-hook . recentf-mode)
-  ;; :hook (after-init-hook . (lambda ()
-  ;;                            (let ((inhibit-message t))
-  ;;                              (recentf-mode 1))))
+  :hook (after-init-hook . (lambda ()
+                             (let ((inhibit-message t))
+                               (recentf-mode 1))))
   :custom
   (recentf-max-saved-items 300) ; default is 20
   :config
@@ -368,6 +367,7 @@ the unwritable tidbits."
 
 (add-hook 'text-mode-hook #'twist-disable-hl-line-mode)
 (add-hook 'prog-mode-hook #'twist-disable-hl-line-mode)
+(add-hook 'conf-mode-hook #'twist-disable-hl-line-mode)
 
 ;;;; Line numbers
 

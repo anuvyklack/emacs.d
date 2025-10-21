@@ -45,6 +45,7 @@
 (require 'twist-elpaca)
 
 ;;; Color theme
+(require 'twist-utils)
 
 (use-package ef-themes
   :ensure (ef-themes :host github :repo "anuvyklack/ef-themes" :wait t)
@@ -56,7 +57,9 @@
   :config
   (mapc #'disable-theme custom-enabled-themes) ; Disable all other themes.
   (load-theme 'ef-light :no-confirm)
-  (twist-load-file "modules/ef-light.el") ; Load my customizations
+  ;; Load my customizations
+  (twist-load-file "modules/ef-light.el")
+  ;; (load-file (file-name-concat twist-root-directory "modules/ef-light.el"))
   (enable-theme 'ef-light))
 
 ;;; Emacs Twist modules

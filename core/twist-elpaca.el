@@ -5,6 +5,8 @@
 ;;
 ;;; Code:
 
+(setq resize-mini-windows t)
+
 (defvar elpaca-installer-version 0.11)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
@@ -50,6 +52,10 @@
 (add-hook 'after-init-hook #'elpaca-process-queues)
 
 (elpaca `(,@elpaca-order))
+(elpaca dash)
+(elpaca f)
+(elpaca s)
+(elpaca-wait)
 
 (elpaca elpaca-use-package
   (setopt use-package-always-ensure nil) ; Elpaca forcefully enables it.
