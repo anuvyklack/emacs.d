@@ -5,6 +5,7 @@
 
 (use-package consult
   :ensure t
+  :defer t
   :custom
   (consult-narrow-key "<")
   (consult-fd-args '((if (executable-find "fdfind" 'remote) "fdfind" "fd")
@@ -14,9 +15,6 @@
                      "--hidden --exclude .git"))
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
-  :hook
-  ;; Enable automatic preview at point in the *Completions* buffer.
-  (completion-list-mode-hook . consult-preview-at-point-mode)
   :config
   ;; Aggressive asynchronous that yield instantaneous results. (suitable for
   ;; high-performance systems.) Note: Minad, the author of Consult, does not
@@ -31,6 +29,9 @@
   (setq consult-async-input-throttle 0.2
         consult-async-input-debounce 0.1
         consult-async-refresh-delay  0.15)
+
+  ;; Enable automatic preview at point in the *Completions* buffer.
+  (add-hook 'completion-list-mode-hook #'consult-preview-at-point-mode)
 
   ;; Configure the register formatting and preview. This improves the register.
   (setq register-preview-delay 0.5
@@ -48,21 +49,6 @@
   (consult-customize
    consult-theme
    :preview-key '(:debounce 0.5 any)))
-
-(helix-keymap-global-set
-  "<remap> <repeat-complex-command>"        'consult-complex-command
-  "<remap> <recentf-open>"                  'consult-recent-file
-  "<remap> <recentf-open-files>"            'consult-recent-file
-  "<remap> <bookmark-jump>"                 'consult-bookmark
-  "<remap> <goto-line>"                     'consult-goto-line
-  "<remap> <imenu>"                         'consult-imenu
-  "<remap> <Info-search>"                   'consult-info
-  "<remap> <load-theme>"                    'consult-theme
-  "<remap> <switch-to-buffer>"              'consult-buffer
-  "<remap> <switch-to-buffer-other-window>" 'consult-buffer-other-window
-  "<remap> <switch-to-buffer-other-frame>"  'consult-buffer-other-frame
-  "<remap> <yank-pop>"                      'consult-yank-pop
-  "<remap> <locate>"                        'consult-locate)
 
 ;;; Keybindings
 
@@ -102,6 +88,21 @@
   "C-x 5 b" 'consult-buffer-other-frame
   "C-x t b" 'consult-buffer-other-tab
   "C-x r b" 'consult-bookmark)
+
+(helix-keymap-global-set
+  "<remap> <repeat-complex-command>"        'consult-complex-command
+  "<remap> <recentf-open>"                  'consult-recent-file
+  "<remap> <recentf-open-files>"            'consult-recent-file
+  "<remap> <bookmark-jump>"                 'consult-bookmark
+  "<remap> <goto-line>"                     'consult-goto-line
+  "<remap> <imenu>"                         'consult-imenu
+  "<remap> <Info-search>"                   'consult-info
+  "<remap> <load-theme>"                    'consult-theme
+  "<remap> <switch-to-buffer>"              'consult-buffer
+  "<remap> <switch-to-buffer-other-window>" 'consult-buffer-other-window
+  "<remap> <switch-to-buffer-other-frame>"  'consult-buffer-other-frame
+  "<remap> <yank-pop>"                      'consult-yank-pop
+  "<remap> <locate>"                        'consult-locate)
 
 (provide 'twist-consult)
 ;;; twist-consult.el ends here

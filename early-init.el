@@ -53,6 +53,10 @@
       byte-compile-warnings debug-on-error
       byte-compile-verbose  debug-on-error)
 
+;; Ask the user whether to terminate asynchronous compilations on exit.
+;; This prevents native compilation from leaving temporary files in /tmp.
+(setq native-comp-async-query-on-exit t)
+
 ;;; Miscellaneous
 
 (set-language-environment "UTF-8")
@@ -164,9 +168,7 @@
 ;;;; Performance: Disable mode-line during startup
 
 ;; Disable the mode line during startup to reduces visual clutter.
-(unless (or (daemonp)
-            noninteractive
-            minimal-emacs-debug)
+(unless (or init-file-debug (daemonp) noninteractive)
   (put 'mode-line-format
        'initial-value (default-toplevel-value 'mode-line-format))
   (setq-default mode-line-format nil)
@@ -285,15 +287,27 @@ This variable holds a list of Emacs UI features that can be enabled:
 (setq load-prefer-newer t)
 
 (defvar twist-root-directory (file-name-directory load-file-name)
-  "The root directory of Twist's core files.
+  "The root directory of Emacs Twist core files.
 Must end with a directory separator.")
 
 (setq user-emacs-directory   (expand-file-name "var/" twist-root-directory)
+      package-user-dir       (expand-file-name "elpa/" user-emacs-directory)
       custom-theme-directory (expand-file-name "themes/" user-emacs-directory)
       custom-file            (expand-file-name "custom.el" user-emacs-directory))
 
-(add-to-list load-path (expand-file-name "core"    twist-root-directory))
-(add-to-list load-path (expand-file-name "modules" twist-root-directory))
+(add-to-list 'load-path (expand-file-name "core"    twist-root-directory))
+(add-to-list 'load-path (expand-file-name "modules" twist-root-directory))
+
+;; Load "custom.el" file.
+(add-hook 'elpaca-after-init-hook (lambda ()
+                                    (when (file-exists-p custom-file)
+                                      (load-file custom-file))))
+
+(defun twist-load-file (file)
+  "Load FILE by path relative to Emacs Twist root directory."
+  (let ((file (expand-file-name file twist-root-directory)))
+    (when (file-exists-p file)
+      (load-file file))))
 
 ;; Local variables:
 ;; byte-compile-warnings: (not obsolete free-vars)

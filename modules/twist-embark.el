@@ -5,6 +5,7 @@
 
 (use-package embark
   :ensure t
+  :defer t
   :custom
   (which-key-use-C-h-commands nil)
   (prefix-help-command 'embark-prefix-help-command)

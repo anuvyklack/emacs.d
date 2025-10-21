@@ -18,7 +18,6 @@
   "d" 'dired-jump
   "b" (cons "buffer"
             (define-keymap
-              ;; Buffer
               "b" 'ibuffer-jump        ; "<leader> bb"
               "n" 'switch-to-buffer    ; next after "b"
               "s" 'save-buffer
@@ -28,25 +27,35 @@
               "g" 'revert-buffer       ; also "C-w r"
               "r" 'rename-buffer
               "x" 'scratch-buffer
-              ;; Bookmakrs
+              ;; Bookmarks
               "m" 'bookmark-set
               "M" 'bookmark-delete))
+  "f" (cons "file/find"
+            (define-keymap
+              ;; "x" 'xref-find-apropos
+              "b" 'switch-to-buffer
+              "f" 'find-file
+              "F" 'consult-find
+              "d" 'dired
+              "l" 'locate
+              "r" '("Recent files" . recentf-open)
+              "w" 'write-file))
   "o" (cons "open"
             (define-keymap
               "t" 'treemacs
               "i" 'imenu-list-smart-toggle))
   "s" (cons "search"  search-map)
   "p" (cons "project" project-prefix-map)
-  "v" `("version control" . vc-prefix-map))
+  "v" (cons "version control" vc-prefix-map))
+
+;; <leader> s
+(helix-keymap-set search-map
+  "i" 'imenu)
 
 (helix-keymap-global-set
   "C-x C-b" 'ibuffer-jump ; override `list-buffers'
   "C-x C-r" 'recentf-open ; override `find-file-read-only'
   "C-x C-d" 'dired-jump)  ; override `list-directory'
-
-;; <leader> s
-(helix-keymap-set search-map
-  "i" 'imenu)
 
 (provide 'twist-keybindings)
 ;;; twist-keybindings.el ends here

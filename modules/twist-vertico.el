@@ -33,11 +33,11 @@
 (use-package orderless
   :ensure t
   :custom
-  (completion-styles . '(orderless basic))
-  (completion-category-defaults . nil)
+  (completion-styles '(orderless basic))
+  (completion-category-defaults nil)
   ;; Despite override in the name orderless can still be used in `find-file' etc.
-  (completion-category-overrides . '((file (styles orderless partial-completion))))
-  ;; (orderless-component-separator . #'orderless-escapable-split-on-space)
+  (completion-category-overrides '((file (styles orderless partial-completion))))
+  ;; (orderless-component-separator #'orderless-escapable-split-on-space)
   :config
   ;; This is the default values.
   (setq orderless-affix-dispatch-alist '((?% . char-fold-to-regexp)
@@ -55,36 +55,37 @@
   "z '"  '("vertico repeat" . vertico-repeat)
   "z \"" '("select vertico session" . vertico-repeat-select))
 
-(helix-keymap-set vertico-map :state 'normal
-  "y"   'vertico-save ; Copy current candidate to kill ring.
-  "j"   'vertico-next
-  "k"   'vertico-previous
-  "g g" 'vertico-first
-  "G"   'vertico-last)
+(with-eval-after-load 'vertico
+  (helix-keymap-set vertico-map :state 'normal
+    "y"   'vertico-save ; Copy current candidate to kill ring.
+    "j"   'vertico-next
+    "k"   'vertico-previous
+    "g g" 'vertico-first
+    "G"   'vertico-last)
 
-(helix-keymap-set vertico-map
-  "M-j"   'next-history-element
-  "M-k"   'previous-history-element
+  (helix-keymap-set vertico-map
+    "M-j"   'next-history-element
+    "M-k"   'previous-history-element
 
-  "C-l"   'vertico-insert
-  "C-h"   'vertico-directory-up
+    "C-l"   'vertico-insert
+    "C-h"   'vertico-directory-up
 
-  "C-S-j" 'vertico-next-group
-  "C-S-k" 'vertico-previous-group
-  "C-n"   'vertico-next-group
-  "C-S-n" 'vertico-previous-group
+    "C-S-j" 'vertico-next-group
+    "C-S-k" 'vertico-previous-group
+    "C-n"   'vertico-next-group
+    "C-S-n" 'vertico-previous-group
 
-  ;; Rebind } / { and ]p / [p keys
-  "<remap> <helix-forward-paragraph>"      'vertico-next-group
-  "<remap> <helix-backward-paragraph>"     'vertico-previous-group
-  "<remap> <helix-forward-paragraph-end>"  'vertico-next-group
-  "<remap> <helix-backward-paragraph-end>" 'vertico-previous-group
+    ;; Rebind } / { and ]p / [p keys
+    "<remap> <helix-forward-paragraph>"      'vertico-next-group
+    "<remap> <helix-backward-paragraph>"     'vertico-previous-group
+    "<remap> <helix-forward-paragraph-end>"  'vertico-next-group
+    "<remap> <helix-backward-paragraph-end>" 'vertico-previous-group
 
-  ;; Rebind C-f / C-b and C-d / C-u scrolling keys
-  "<remap> <helix-smooth-scroll-down>"      'vertico-scroll-up
-  "<remap> <helix-smooth-scroll-up>"        'vertico-scroll-down
-  "<remap> <helix-smooth-scroll-page-down>" 'vertico-scroll-up
-  "<remap> <helix-smooth-scroll-page-up>"   'vertico-scroll-down)
+    ;; Rebind C-f / C-b and C-d / C-u scrolling keys
+    "<remap> <helix-smooth-scroll-down>"      'vertico-scroll-up
+    "<remap> <helix-smooth-scroll-up>"        'vertico-scroll-down
+    "<remap> <helix-smooth-scroll-page-down>" 'vertico-scroll-up
+    "<remap> <helix-smooth-scroll-page-up>"   'vertico-scroll-down))
 
 (provide 'twist-vertico)
 ;;; twist-vertico.el ends here

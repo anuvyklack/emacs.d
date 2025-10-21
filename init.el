@@ -8,39 +8,71 @@
 ;;
 ;;; Commentary:
 ;;; Code:
+;;; Fonts
+
+(set-face-font 'default (font-spec :family "PragmataPro Mono Liga" :size 13.9))
+(set-face-font 'fixed-pitch (font-spec :family "PragmataPro Mono Liga" :size 13.9))
+(setq use-default-font-for-symbols t)
+
+;; (set-face-font 'default (font-spec :family "Inconsolata LGC" :size 17))
+;; (setopt use-default-font-for-symbols nil)
+
+;; (set-face-attribute 'fixed-pitch nil
+;;                     :font (font-spec :family "PragmataPro Mono Liga" :size 13.9))
+;; (set-face-attribute 'fixed-pitch-serif nil
+;;                     :family "Iosevka Term Curly Slab Medium")
+
+;; Nerd Font
+(set-fontset-font t (cons ?\xf0001 ?\xf1af0) "Symbols Nerd Font Mono" nil 'prepend)
+
+;; Unicode Symbols for Legacy Computing
+(set-fontset-font t (cons ?\x1fb00 ?\x1fbca) "LegacyComputing" nil 'prepend)
+(set-fontset-font t (cons ?🯰 ?🯹) "LegacyComputing" nil 'prepend)
+
+;; (char-to-string ?\x1fb00) ;; ?🬀
+;; (char-to-string ?\x1fbca) ;; ?🯊
+
+;;; Package manager
+
+;; In case you use VPN:
+;;
+;; Emacs populates `url-proxy-services' variable from:
+;; `https_proxy', `socks_proxy', `no_proxy' environment variables.
+(setq url-proxy-services '(("socks" . "127.0.0.1:10808")
+                           ("https" . "127.0.0.1:10809"))
+      gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
 
 (require 'twist-elpaca)
 
-(elpaca dash)
-(elpaca f)
-(elpaca s)
-(elpaca pcre2el)
+;;; Color theme
 
-(elpaca avy
-  (setq avy-keys (number-sequence ?a ?z) ;; Any lower-case letter a-z.
-        avy-style 'at-full
-        avy-all-windows nil
-        avy-all-windows-alt t
-        avy-background t
-        ;; the unpredictability of this (when enabled) makes it a poor default
-        avy-single-candidate-jump t))
+(use-package ef-themes
+  :ensure (ef-themes :host github :repo "anuvyklack/ef-themes" :wait t)
+  :custom
+  (ef-themes-mixed-fonts t)
+  (ef-themes-variable-pitch-ui t)
+  ;; Use `ef-themes-toggle' to cycle between these themes.
+  (ef-themes-to-toggle '(ef-light ef-dream))
+  :config
+  (mapc #'disable-theme custom-enabled-themes) ; Disable all other themes.
+  (load-theme 'ef-light :no-confirm)
+  (twist-load-file "modules/ef-light.el") ; Load my customizations
+  (enable-theme 'ef-light))
 
-(elpaca (helix :repo "~/code/emacs/helix"
-               :files (:defaults "**"))
-  ;; (require 'helix)
-  ;; (add-hook 'elpaca-after-init-hook #'helix-mode)
-  (helix-mode))
+;;; Emacs Twist modules
 
-(elpaca-wait)
+(require 'twist-core)
+(require 'twist-emacs-lisp)
+(require 'twist-keybindings)
 
-(elpaca blackout (require 'blackout))
-(elpaca nerd-icons)
-(elpaca wgrep)
+(require 'twist-vertico)
+(require 'twist-consult)
+(require 'twist-embark)
+(require 'twist-xref)
 
-(require 'twist-editor)
-(with-eval-after-load 'info (require 'twist-info))
+;; (require 'twist-dired)
+;; (require 'twist-outline)
+(require 'twist-deadgrep)
+;; (require 'twist-edit-indirect)
 
-;; Local variables:
-;; byte-compile-warnings: (not obsolete free-vars)
-;; End:
 ;;; init.el ends here

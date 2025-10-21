@@ -44,7 +44,7 @@
 ;; Vim uses `K' but it is occupied in Helix. `M' is near `K' and it is free.
 (dolist (keymap (list emacs-lisp-mode-map lisp-data-mode-map))
   (helix-keymap-set keymap :state 'normal
-    "M" #'helpful-at-point))
+    "M" 'helpful-at-point))
 
 (helix-keymap-set help-map
   "F" 'describe-face

@@ -1,9 +1,8 @@
-;;; helix-deadgrep.el -*- lexical-binding: t; -*-
+;;; twist-deadgrep.el -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
-(require 'helix-macro)
+(require 'helix-macros)
 (require 'helix-core)
-(require 'deadgrep)
 
 (use-package deadgrep
   :ensure t
@@ -25,14 +24,14 @@
 
     "RET" 'deadgrep-visit-result-other-window
 
-    "o"   'helix-deadgrep-show-result-other-window
-    "C-o" 'helix-deadgrep-show-result-other-window
+    "o"   'twist-deadgrep-show-result-other-window
+    "C-o" 'twist-deadgrep-show-result-other-window
 
     "n"   'deadgrep-forward-match
     "N"   'deadgrep-backward-match
 
-    "C-j" 'helix-deadgrep-forward-match-show-other-window
-    "C-k" 'helix-deadgrep-backward-match-show-other-window
+    "C-j" 'twist-deadgrep-forward-match-show-other-window
+    "C-k" 'twist-deadgrep-backward-match-show-other-window
 
     "}"   'deadgrep-forward-filename
     "{"   'deadgrep-backward-filename
@@ -54,7 +53,7 @@
 
 ;;; Commands
 
-(defun helix-deadgrep-show-result-other-window ()
+(defun twist-deadgrep-show-result-other-window ()
   "Show search result at point in another window."
   (interactive)
   (unless next-error-follow-minor-mode
@@ -63,17 +62,17 @@
         (deadgrep-visit-result-other-window)
         (deactivate-mark)))))
 
-(defun helix-deadgrep-forward-match-show-other-window ()
+(defun twist-deadgrep-forward-match-show-other-window ()
   "Move point to next search result and show it in another window."
   (interactive)
   (deadgrep-forward-match)
-  (helix-deadgrep-show-result-other-window))
+  (twist-deadgrep-show-result-other-window))
 
-(defun helix-deadgrep-backward-match-show-other-window ()
+(defun twist-deadgrep-backward-match-show-other-window ()
   "Move point to previous search result and show it in another window."
   (interactive)
   (deadgrep-backward-match)
-  (helix-deadgrep-show-result-other-window))
+  (twist-deadgrep-show-result-other-window))
 
-(provide 'helix-deadgrep)
-;;; helix-deadgrep.el ends here
+(provide 'twist-deadgrep)
+;;; twist-deadgrep.el ends here

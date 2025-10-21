@@ -3,6 +3,16 @@
 (require 's)
 (require 'dash)
 
+(defmacro +theme-set-faces (theme &rest specs)
+  "For THEME configure FACE with SPECS.
+
+\(fn THEME &rest (FACE . SPECS))"
+  (declare (indent 1))
+  `(apply #'custom-theme-set-faces ,theme
+          (mapcar (-lambda ((face . spec))
+                    `(,face ((t ,spec))))
+                  (list ,@specs))))
+
 (defun +original-value (symbol)
   "Return the original value for SYMBOL, if any."
   ;; This code is taken from the `helpful' package. I have no idea why it’s
@@ -12,17 +22,6 @@
     (if (consp orig-val-expr)
         (ignore-errors
           (eval (car orig-val-expr))))))
-
-(defun +common-indentation ()
-  "Return the common indentation off all lines in the buffer."
-  (save-excursion
-    (goto-char (point-min))
-    (let ((indentation 0))
-      (while (not (eobp))
-        (unless (s-blank-str? (thing-at-point 'line))
-          (cl-callf min indentation (current-indentation)))
-        (forward-line))
-      indentation)))
 
 (defun +hook-values (hook)
   "Return list with all local and global elements of the HOOK.

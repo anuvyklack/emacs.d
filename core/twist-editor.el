@@ -1,14 +1,9 @@
 ;;; twist-editor.el --- defaults for text editing -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
-(require 'xdg)
 (require 'dash)
 
 ;;; Editor
-
-;; Ask the user whether to terminate asynchronous compilations on exit.
-;; This prevents native compilation from leaving temporary files in /tmp.
-(setq native-comp-async-query-on-exit t)
 
 ;; This setting forces Emacs to save bookmarks immediately after each change.
 ;; Benefit: you never lose bookmarks if Emacs crashes.
@@ -212,12 +207,14 @@ the unwritable tidbits."
                                      Buffer-menu-mode)))
 
 ;;;;; Keep track of recently opened files and places in them
+(require 'xdg)
 
 ;; Keep track of opened files.
 (use-package recentf
-  :hook (after-init-hook . (lambda ()
-                             (let ((inhibit-message t))
-                               (recentf-mode 1))))
+  :hook (after-init-hook . recentf-mode)
+  ;; :hook (after-init-hook . (lambda ()
+  ;;                            (let ((inhibit-message t))
+  ;;                              (recentf-mode 1))))
   :custom
   (recentf-max-saved-items 300) ; default is 20
   :config
@@ -227,8 +224,8 @@ the unwritable tidbits."
   (add-hook 'kill-emacs-hook #'recentf-cleanup)
 
   ;; Don't remember files in runtime folders.
-  (add-to-list 'recentf-exclude
-               (concat "^" (regexp-quote (or (xdg-runtime-dir) "/run"))))
+  (add-to-list 'recentf-exclude (concat "^" (regexp-quote (or (xdg-runtime-dir)
+                                                              "/run"))))
 
   ;; PERF: Text properties inflate the size of recentf's files, and there is no
   ;;   reason to persist them (must be first in `recentf-filename-handlers'!)
@@ -303,7 +300,7 @@ the unwritable tidbits."
 
 ;; Remove RCS, CVS, SCCS, and Bzr, because it's a lot less work for vc to
 ;; check them all (especially in TRAMP buffers), and who uses any of these?
-(setq vc-handled-backends . '(Git Hg SVN SRC))
+(setq vc-handled-backends '(Git Hg SVN SRC))
 
 ;; PERF: Ignore node_modules (expensive for vc ops to index).
 (setq vc-ignore-dir-regexp (format "%s\\|%s"
@@ -416,7 +413,7 @@ the unwritable tidbits."
       window-divider-default-right-width 1)
 (add-hook 'after-init-hook #'window-divider-mode)
 
-;; Prefer vertical splits over horizontal ones
+;; Prefer vertical splits over horizontal ones.
 (setq split-width-threshold 170
       split-height-threshold nil)
 

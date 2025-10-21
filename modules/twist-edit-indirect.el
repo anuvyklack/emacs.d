@@ -30,10 +30,12 @@
 ;; `edit-indirect-overlapping' error is signaled.
 ;;
 ;;; Code:
-(require 'twist-utils)
+(require 's)
 (require 'helix-core)
 
 (elpaca edit-indirect)
+
+;;; Keybindings
 
 (helix-keymap-global-set :state 'normal
   "z n" 'twist-edit-region-indirect) ; replace `helix-narrow-to-region-indirectly'
@@ -42,6 +44,8 @@
   (helix-keymap-set edit-indirect-mode-map :state 'normal
     "Z Z" #'edit-indirect-commit
     "Z Q" #'edit-indirect-abort))
+
+;;; Command
 
 ;;;###autoload
 (defun twist-edit-region-indirect (arg)
@@ -65,7 +69,7 @@ If there's already an edit-indirect buffer for region, use that. If there's
 already an edit-indirect buffer active overlapping any portion of region, an
 `edit-indirect-overlapping' error is signaled."
   (interactive "P")
-  (require 'edit-indirect)
+  ;; (require 'edit-indirect)
   (unless (use-region-p) (user-error "No region selected"))
   (helix-restore-newline-at-eol)
   (let ((beg (region-beginning))
@@ -104,6 +108,17 @@ already an edit-indirect buffer active overlapping any portion of region, an
     (save-excursion
       (indent-rigidly (point-min) (point-max)
                       twist-edit-indirect--intentation))))
+
+(defun +common-indentation ()
+  "Return the common indentation off all lines in the buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((indentation 0))
+      (while (not (eobp))
+        (unless (s-blank-str? (thing-at-point 'line))
+          (cl-callf min indentation (current-indentation)))
+        (forward-line))
+      indentation)))
 
 (provide 'twist-edit-indirect)
 ;;; twist-edit-indirect.el ends here

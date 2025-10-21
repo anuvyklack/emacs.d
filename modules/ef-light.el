@@ -1,4 +1,5 @@
 ;;; -*- lexical-binding: t; no-byte-compile: t; -*-
+(require 'twist-utils)
 
 ;; (add-hook 'enable-theme-functions
 ;;           (lambda (theme)
@@ -14,7 +15,7 @@
 
 ;;; General
 
-(my-custom-theme-set-faces 'ef-light
+(+theme-set-faces 'ef-light
   '(region
     :background "#d6f4ff" ;; original #bfefff
     :extend t)
@@ -29,7 +30,7 @@
 
 ;;; helix
 
-(my-custom-theme-set-faces 'ef-light
+(+theme-set-faces 'ef-light
   '(helix-mode-line-cursors-indicator
     :weight bold
     ;; :inherit mode-line-emphasis
@@ -45,7 +46,7 @@
 ;; (font '(:family "Basic Commercial LT" :weight normal))
 
 ;; (let ((font '(:family "ITC Avant Garde Gothic W1G" :weight medium)))
-;;   (my-custom-theme-set-faces 'ef-light
+;;   (+theme-set-faces 'ef-light
 ;;     `(org-level-1 :foreground "#375cd8" :height 1.09 ,@font)
 ;;     '(org-level-2 :foreground "#cf25aa" :weight normal :height 1.09)
 ;;     '(org-level-3 :foreground "#1f77bb" :weight normal :height 1.09)
@@ -56,7 +57,7 @@
 ;; It does take effect of adding padding around headings, but it is a hack
 ;; and not reliable.
 (let ((font (font-spec :family "ITC Avant Garde Gothic W1G" :weight 'semibold)))
-  (my-custom-theme-set-faces 'ef-light
+  (+theme-set-faces 'ef-light
     `(org-level-1
       :foreground "#375cd8" :height 1.09 :font ,font
       :box (:line-width 2 :color ,(face-background 'default)))
@@ -75,6 +76,6 @@
 
 ;;;; code blocks
 
-(my-custom-theme-set-faces 'ef-light
+(+theme-set-faces 'ef-light
   '(org-verbatim :foreground "#4250ef" :background "#f5f5f5")
   '(org-code     :foreground "#cf25aa" :background "#f5f5f5"))
