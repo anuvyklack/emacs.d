@@ -35,8 +35,10 @@
 (elpaca-wait)
 
 (elpaca imenu-list)
+(elpaca wgrep)
 
 (require 'twist-editor)
+(with-eval-after-load 'info (require 'twist-info))
 
 ;; Local variables:
 ;; byte-compile-warnings: (not obsolete free-vars)
