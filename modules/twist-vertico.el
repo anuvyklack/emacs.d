@@ -51,7 +51,7 @@
 
 ;;; Keybindings
 
-(helix-keymap-global-set :state 'normal
+(helix-keymap-global-set :state '(normal motion)
   "z '"  '("vertico repeat" . vertico-repeat)
   "z \"" '("select vertico session" . vertico-repeat-select))
 
@@ -80,7 +80,7 @@
   "<remap> <helix-forward-paragraph-end>"  'vertico-next-group
   "<remap> <helix-backward-paragraph-end>" 'vertico-previous-group
 
-  ;; Rebind scrolling keys
+  ;; Rebind C-f / C-b and C-d / C-u scrolling keys
   "<remap> <helix-smooth-scroll-down>"      'vertico-scroll-up
   "<remap> <helix-smooth-scroll-up>"        'vertico-scroll-down
   "<remap> <helix-smooth-scroll-page-down>" 'vertico-scroll-up

@@ -5,6 +5,13 @@
 (require 'dash)
 
 ;;; Editor
+
+;; This setting forces Emacs to save bookmarks immediately after each change.
+;; Benefit: you never lose bookmarks if Emacs crashes.
+(setq bookmark-save-flag 1)
+
+(setq custom-buffer-done-kill t)
+
 ;;;; Minibuffer
 
 ;; Allow opening new minibuffers from inside existing minibuffers.
@@ -83,6 +90,9 @@ the unwritable tidbits."
 ;; ;; Disable the warning "X and Y are the same file". It's fine to ignore this
 ;; ;; warning as it will redirect you to the existing buffer anyway.
 ;; (setq find-file-suppress-same-file-warnings t)
+
+;; ;; Skip confirmation prompts when creating a new file or buffer
+;; (setq confirm-nonexistent-file-or-buffer nil)
 
 ;; Delete by moving to trash in interactive mode
 (setq delete-by-moving-to-trash (not noninteractive)
@@ -244,6 +254,18 @@ the unwritable tidbits."
       read-file-name-completion-ignore-case t
       read-buffer-completion-ignore-case t)
 
+;;;; Comint (general command interpreter in a window)
+
+(setq ansi-color-for-comint-mode t
+      comint-prompt-read-only t
+      comint-buffer-maximum-size 4096)
+
+;;;; Compilation
+
+(setq compilation-ask-about-save nil
+      compilation-always-kill t
+      compilation-scroll-output 'first-error)
+
 ;;;; VC
 
 (setq vc-git-print-log-follow t
@@ -263,18 +285,26 @@ the unwritable tidbits."
   (keymap-set vc-annotate-mode-map "<remap> <quit-window>" #'kill-current-buffer))
 
 ;;; UI
-
-(setq prettify-symbols-unprettify-at-point 'right-edge)
-
-(setq truncate-string-ellipsis "…")
+;;;; Misc
 
 ;; Accept shorter responses: "y" for yes and "n" for no.
 (setq use-short-answers t
       read-answer-short 'auto)
 
+(setq prettify-symbols-unprettify-at-point 'right-edge)
+
+;; Position underlines at the descent line instead of the baseline.
+(setq x-underline-at-descent-line t)
+
+(setq truncate-string-ellipsis "…")
+
 ;; No beeping or blinking
 (setq visible-bell nil
       ring-bell-function #'ignore)
+
+;; Disable truncation of printed s-expressions in the message buffer.
+(setq eval-expression-print-length nil
+      eval-expression-print-level nil)
 
 ;;;; Mouse
 
@@ -424,7 +454,7 @@ the unwritable tidbits."
   (mouse-wheel-progressive-speed nil))
 
 ;;; Text editing
-;;;; Miscellaneous
+;;;; Misc
 
 ;; Remove duplicates from the kill ring to reduce clutter.
 (setq kill-do-not-save-duplicates t)

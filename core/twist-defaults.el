@@ -34,33 +34,5 @@
 
 (setq whitespace-line-column nil)  ; Use the value of `fill-column'.
 
-;; Disable truncation of printed s-expressions in the message buffer.
-(setq eval-expression-print-length nil
-      eval-expression-print-level nil)
-
-;; Position underlines at the descent line instead of the baseline.
-(setq x-underline-at-descent-line t)
-
-;; This setting forces Emacs to save bookmarks immediately after each change.
-;; Benefit: you never lose bookmarks if Emacs crashes.
-(setq bookmark-save-flag 1)
-
-(setq custom-buffer-done-kill t)
-
-;;; comint (general command interpreter in a window)
-
-(setq ansi-color-for-comint-mode t
-      comint-prompt-read-only t
-      comint-buffer-maximum-size 4096)
-
-;;; Compilation
-
-(setq compilation-ask-about-save nil
-      compilation-always-kill t
-      compilation-scroll-output 'first-error)
-
-;; ;; Skip confirmation prompts when creating a new file or buffer
-;; (setq confirm-nonexistent-file-or-buffer nil)
-
 (provide 'twist-defaults)
 ;;; twist-defaults.el ends here

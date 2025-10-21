@@ -4,26 +4,26 @@
 (require 'twist-utils)
 
 (use-package xref
+  :defer t
   :custom
-  (xref-search-program 'ripgrep) ;; or 'ugrep
+  (xref-search-program 'ripgrep) ; or 'ugrep
   (xref-auto-jump-to-first-definition 'show)
   (xref-prompt-for-identifier nil)
   (xref-history-storage #'xref-window-local-history)
   ;; Enable completion in the minibuffer instead of the definitions buffer.
   ;; You can use `embark-export' to export minibuffer content to xref buffer.
-  (xref-show-definitions-function #'xref-show-definitions-completing-read)
   (xref-show-xrefs-function #'xref-show-definitions-completing-read)
-
+  (xref-show-definitions-function #'xref-show-definitions-completing-read)
   ;; (xref-show-definitions-function #'xref-show-definitions-buffer-at-bottom)
-  ;; (xref-show-definitions-function #'xref-show-definitions-buffer)
-  ;; (xref-show-xrefs-function #'xref--show-xref-buffer)
   :config
   (advice-add 'xref-find-definitions :around '+xref-try-all-backends-a)
   (advice-add 'xref-find-references  :around '+xref-try-all-backends-a))
 
 (use-package dumb-jump
   :ensure t
-  :hook (xref-backend-functions . dumb-jump-xref-activate))
+  :after xref
+  :config
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 
 (use-package nerd-icons-xref
   :ensure t

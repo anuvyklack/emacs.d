@@ -15,8 +15,6 @@
 (elpaca f)
 (elpaca s)
 (elpaca pcre2el)
-(elpaca blackout (require 'blackout))
-(elpaca nerd-icons)
 
 (elpaca avy
   (setq avy-keys (number-sequence ?a ?z) ;; Any lower-case letter a-z.
@@ -27,13 +25,16 @@
         ;; the unpredictability of this (when enabled) makes it a poor default
         avy-single-candidate-jump t))
 
-(use-package helix
-  :ensure (helix :repo "~/code/emacs/helix"
-                 :files (:defaults "**"))
-  :hook (elpaca-after-init-hook . helix-mode))
+(elpaca (helix :repo "~/code/emacs/helix"
+               :files (:defaults "**"))
+  ;; (require 'helix)
+  ;; (add-hook 'elpaca-after-init-hook #'helix-mode)
+  (helix-mode))
 
 (elpaca-wait)
 
+(elpaca blackout (require 'blackout))
+(elpaca nerd-icons)
 (elpaca imenu-list)
 (elpaca wgrep)
 
