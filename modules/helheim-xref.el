@@ -1,7 +1,7 @@
-;;; twist-xref.el -*- lexical-binding: t -*-
+;;; helheim-xref.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
-(require 'twist-utils)
+(require 'helheim-utils)
 
 (use-package xref
   :defer t
@@ -41,5 +41,5 @@
           (apply orig-fun args)))
       (when jumped (cl-return)))))
 
-(provide 'twist-xref)
-;;; twist-xref.el ends here
+(provide 'helheim-xref)
+;;; helheim-xref.el ends here

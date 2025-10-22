@@ -1,4 +1,4 @@
-;;; twist-defaults.el --- Emacs Twist -*- lexical-binding: t; no-byte-compile: t; -*-
+;;; helheim-defaults.el --- Emacs Helheim -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
 ;; Copyright © 2025 Yuriy Artemyev
 ;;
@@ -26,5 +26,5 @@
 
 (setq whitespace-line-column nil)  ; Use the value of `fill-column'.
 
-(provide 'twist-defaults)
-;;; twist-defaults.el ends here
+(provide 'helheim-defaults)
+;;; helheim-defaults.el ends here

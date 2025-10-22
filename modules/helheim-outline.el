@@ -1,4 +1,4 @@
-;;; twist-outline.el -*- lexical-binding: t; -*-
+;;; helheim-outline.el -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
 (require 'helix-macros)
@@ -109,5 +109,5 @@
                     -1 :adjust)
   (helix-reveal-point-when-on-top))
 
-(provide 'twist-outline)
-;;; twist-outline.el ends here
+(provide 'helheim-outline)
+;;; helheim-outline.el ends here

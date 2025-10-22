@@ -1,4 +1,4 @@
-;;; twist-vertico.el -*- lexical-binding: t -*-
+;;; helheim-vertico.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 (require 'helix-core)
@@ -87,5 +87,5 @@
     "<remap> <helix-smooth-scroll-page-down>" 'vertico-scroll-up
     "<remap> <helix-smooth-scroll-page-up>"   'vertico-scroll-down))
 
-(provide 'twist-vertico)
-;;; twist-vertico.el ends here
+(provide 'helheim-vertico)
+;;; helheim-vertico.el ends here

@@ -1,4 +1,4 @@
-;;; twist-deadgrep.el -*- lexical-binding: t; -*-
+;;; helheim-deadgrep.el -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
 (require 'helix-macros)
@@ -9,7 +9,7 @@
   :defer t
   :config
   ;; (add-hook 'deadgrep-mode-hook #'next-error-follow-minor-mode)
-  (add-hook 'deadgrep-edit-mode-hook #'twist-disable-hl-line-mode))
+  (add-hook 'deadgrep-edit-mode-hook #'helheim-disable-hl-line-mode))
 
 ;;; Keybindings
 
@@ -24,14 +24,14 @@
 
     "RET" 'deadgrep-visit-result-other-window
 
-    "o"   'twist-deadgrep-show-result-other-window
-    "C-o" 'twist-deadgrep-show-result-other-window
+    "o"   'helheim-deadgrep-show-result-other-window
+    "C-o" 'helheim-deadgrep-show-result-other-window
 
     "n"   'deadgrep-forward-match
     "N"   'deadgrep-backward-match
 
-    "C-j" 'twist-deadgrep-forward-match-show-other-window
-    "C-k" 'twist-deadgrep-backward-match-show-other-window
+    "C-j" 'helheim-deadgrep-forward-match-show-other-window
+    "C-k" 'helheim-deadgrep-backward-match-show-other-window
 
     "}"   'deadgrep-forward-filename
     "{"   'deadgrep-backward-filename
@@ -53,7 +53,7 @@
 
 ;;; Commands
 
-(defun twist-deadgrep-show-result-other-window ()
+(defun helheim-deadgrep-show-result-other-window ()
   "Show search result at point in another window."
   (interactive)
   (unless next-error-follow-minor-mode
@@ -62,17 +62,17 @@
         (deadgrep-visit-result-other-window)
         (deactivate-mark)))))
 
-(defun twist-deadgrep-forward-match-show-other-window ()
+(defun helheim-deadgrep-forward-match-show-other-window ()
   "Move point to next search result and show it in another window."
   (interactive)
   (deadgrep-forward-match)
-  (twist-deadgrep-show-result-other-window))
+  (helheim-deadgrep-show-result-other-window))
 
-(defun twist-deadgrep-backward-match-show-other-window ()
+(defun helheim-deadgrep-backward-match-show-other-window ()
   "Move point to previous search result and show it in another window."
   (interactive)
   (deadgrep-backward-match)
-  (twist-deadgrep-show-result-other-window))
+  (helheim-deadgrep-show-result-other-window))
 
-(provide 'twist-deadgrep)
-;;; twist-deadgrep.el ends here
+(provide 'helheim-deadgrep)
+;;; helheim-deadgrep.el ends here

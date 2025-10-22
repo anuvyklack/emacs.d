@@ -1,4 +1,4 @@
-;;; twist-elpaca.el -*- lexical-binding: t; -*-
+;;; helheim-elpaca.el -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;
 ;; Elpaca package manager bootstrap.
@@ -64,5 +64,5 @@
 (with-eval-after-load 'helix
   (helix-set-initial-state 'elpaca-info-mode 'normal))
 
-(provide 'twist-elpaca)
-;;; twist-elpaca.el ends here
+(provide 'helheim-elpaca)
+;;; helheim-elpaca.el ends here

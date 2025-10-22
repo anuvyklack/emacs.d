@@ -1,4 +1,4 @@
-;;; init.el --- Init -*- lexical-binding: t; -*-
+;;; init.el -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
 ;; Author: Yuriy Artemyev
 ;; URL: https://github.com/anuvyklack/emacs-twist
@@ -42,10 +42,10 @@
                            ("https" . "127.0.0.1:10809"))
       gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
 
-(require 'twist-elpaca)
+(require 'helheim-elpaca)
 
 ;;; Color theme
-(require 'twist-utils)
+(require 'helheim-utils)
 
 (use-package ef-themes
   :ensure (ef-themes :host github :repo "anuvyklack/ef-themes" :wait t)
@@ -58,24 +58,24 @@
   (mapc #'disable-theme custom-enabled-themes) ; Disable all other themes.
   (load-theme 'ef-light :no-confirm)
   ;; Load my customizations
-  (twist-load-file "modules/ef-light.el")
-  ;; (load-file (file-name-concat twist-root-directory "modules/ef-light.el"))
+  (helheim-load-file "modules/ef-light.el")
+  ;; (load-file (file-name-concat helheim-root-directory "modules/ef-light.el"))
   (enable-theme 'ef-light))
 
-;;; Emacs Twist modules
+;;; Helheim modules
 
-(require 'twist-core)
-(require 'twist-emacs-lisp)
-(require 'twist-keybindings)
+(require 'helheim-core)
+(require 'helheim-emacs-lisp)
+(require 'helheim-keybindings)
 
-(require 'twist-vertico)
-(require 'twist-consult)
-(require 'twist-embark)
-(require 'twist-xref)
+(require 'helheim-vertico)
+(require 'helheim-consult)
+(require 'helheim-embark)
+(require 'helheim-xref)
 
-;; (require 'twist-dired)
-;; (require 'twist-outline)
-(require 'twist-deadgrep)
-;; (require 'twist-edit-indirect)
+;; (require 'helheim-dired)
+;; (require 'helheim-outline)
+(require 'helheim-deadgrep)
+;; (require 'helheim-edit-indirect)
 
 ;;; init.el ends here

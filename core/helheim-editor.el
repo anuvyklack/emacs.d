@@ -1,4 +1,4 @@
-;;; twist-editor.el --- defaults for text editing -*- lexical-binding: t; -*-
+;;; helheim-editor.el --- defaults for text editing -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
 (require 'dash)
@@ -32,8 +32,8 @@
 (use-package savehist
   :hook
   (after-init-hook . savehist-mode)
-  (savehist-save-hook . twist-savehist-unpropertize-variables-h)
-  (savehist-save-hook . twist-savehist-remove-unprintable-registers-h)
+  (savehist-save-hook . helheim-savehist-unpropertize-variables-h)
+  (savehist-save-hook . helheim-savehist-remove-unprintable-registers-h)
   :custom
   (history-length 300)
   (savehist-additional-variables '(kill-ring
@@ -43,7 +43,7 @@
                                    search-ring
                                    regexp-search-ring)))
 
-(defun twist-savehist-unpropertize-variables-h ()
+(defun helheim-savehist-unpropertize-variables-h ()
   "Remove text properties from `kill-ring' to reduce savehist cache size."
   (setq kill-ring (-> kill-ring
                       (-filter #'stringp)
@@ -54,7 +54,7 @@
                                  (cons reg item)))
                              register-alist)))
 
-(defun twist-savehist-remove-unprintable-registers-h ()
+(defun helheim-savehist-remove-unprintable-registers-h ()
   "Remove unwriteable registers (e.g. containing window configurations).
 Otherwise, `savehist' would discard `register-alist' entirely if we don't omit
 the unwritable tidbits."
@@ -105,7 +105,7 @@ the unwritable tidbits."
 ;; Create missing directories when we open a file that doesn't exist under
 ;; a directory tree that may not exist.
 (add-hook 'find-file-not-found-functions
-  (defun twist-create-missing-directories-h ()
+  (defun helheim-create-missing-directories-h ()
     "Automatically create missing directories when creating new files."
     (unless (file-remote-p buffer-file-name)
       (let ((parent-directory (file-name-directory buffer-file-name)))
@@ -152,7 +152,7 @@ the unwritable tidbits."
 ;;   is compressed to a stable 40 characters.
 ;; Borrowed from Doom Emacs.
 (define-advice make-auto-save-file-name ( :around (fn)
-                                          twist-make-hashed-auto-save-file-name)
+                                          helheim-make-hashed-auto-save-file-name)
   "Compress the auto-save file name so paths don't get too long."
   (let ((buffer-file-name
          (if (or
@@ -171,7 +171,7 @@ the unwritable tidbits."
 ;; HACK: ...does the same for Emacs backup files, but also packages that use
 ;;   `make-backup-file-name-1' directly (like undo-tree).
 (define-advice make-backup-file-name-1 ( :around (fn file)
-                                         twist-make-hashed-backup-file-name)
+                                         helheim-make-hashed-backup-file-name)
   "A few places use the backup file name so paths don't get too long."
   (let ((alist backup-directory-alist)
         backup-directory)
@@ -338,7 +338,7 @@ the unwritable tidbits."
 
 ;; Context menu on right mouse button click.
 (when (and (display-graphic-p)
-           (memq 'context-menu twist-emacs-ui-elements))
+           (memq 'context-menu helheim-emacs-ui-elements))
   (add-hook 'after-init-hook #'context-menu-mode))
 
 ;;;; Cursor
@@ -360,14 +360,14 @@ the unwritable tidbits."
 ;; revert, and you need to move once more — very annoying.
 (global-hl-line-mode)
 
-(defun twist-disable-hl-line-mode ()
+(defun helheim-disable-hl-line-mode ()
   "Disable `global-hl-line-mode' in current buffer."
   (setq-local global-hl-line-mode nil)
   (global-hl-line-unhighlight))
 
-(add-hook 'text-mode-hook #'twist-disable-hl-line-mode)
-(add-hook 'prog-mode-hook #'twist-disable-hl-line-mode)
-(add-hook 'conf-mode-hook #'twist-disable-hl-line-mode)
+(add-hook 'text-mode-hook #'helheim-disable-hl-line-mode)
+(add-hook 'prog-mode-hook #'helheim-disable-hl-line-mode)
+(add-hook 'conf-mode-hook #'helheim-disable-hl-line-mode)
 
 ;;;; Line numbers
 
@@ -545,20 +545,20 @@ the unwritable tidbits."
 
 ;;;; Prog-mode
 
-(defun twist-show-trailing-whitespace ()
+(defun helheim-show-trailing-whitespace ()
   "Highlight trailing whitespaces with `trailing-whitespace' face.
 Use `delete-trailing-whitespace' command."
   (setq-local show-trailing-whitespace t))
 
 ;; TODO: report BUG in `display-fill-column-indicator-mode': 2 strings
 ;;   are compared with `eq' instead of `equal' and result is always nil.
-(defun twist-show-fill-column-indicator ()
+(defun helheim-show-fill-column-indicator ()
   "Display `fill-column' indicator."
   (setq-local display-fill-column-indicator t
               display-fill-column-indicator-character ?\u2502))
 
-(add-hook 'prog-mode-hook 'twist-show-trailing-whitespace)
-(add-hook 'prog-mode-hook 'twist-show-fill-column-indicator)
+(add-hook 'prog-mode-hook 'helheim-show-trailing-whitespace)
+(add-hook 'prog-mode-hook 'helheim-show-fill-column-indicator)
 
 (use-package rainbow-delimiters
   :ensure t
@@ -596,6 +596,6 @@ Use `delete-trailing-whitespace' command."
                                          ws-butler-mode
                                          highlight-indent-guides-mode)))
 
-;;; provide `twist-editor'
-(provide 'twist-editor)
-;;; twist-editor.el ends here
+;;; provide `helheim-editor'
+(provide 'helheim-editor)
+;;; helheim-editor.el ends here

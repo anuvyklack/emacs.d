@@ -1,4 +1,4 @@
-;;; twist-keybindings.el -*- lexical-binding: t -*-
+;;; helheim-keybindings.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 (elpaca imenu-list)
@@ -57,6 +57,6 @@
   "C-x C-r" 'recentf-open ; override `find-file-read-only'
   "C-x C-d" 'dired-jump)  ; override `list-directory'
 
-(provide 'twist-keybindings)
-;;; twist-keybindings.el ends here
+(provide 'helheim-keybindings)
+;;; helheim-keybindings.el ends here
 

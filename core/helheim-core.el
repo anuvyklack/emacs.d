@@ -1,4 +1,4 @@
-;;; twist-core.el -*- lexical-binding: t -*-
+;;; helheim-core.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 (elpaca pcre2el)
@@ -14,7 +14,7 @@
         ;; the unpredictability of this (when enabled) makes it a poor default
         avy-single-candidate-jump t))
 
-(elpaca (helix :host github :repo "anuvyklack/helix.el"
+(elpaca (helix :repo "~/code/emacs/helix"
                :files (:defaults "**"))
   (helix-mode))
 
@@ -23,9 +23,9 @@
 (elpaca nerd-icons)
 (elpaca wgrep)
 
-(require 'twist-editor)
-(require 'twist-help)
-(with-eval-after-load 'info (require 'twist-info))
+(require 'helheim-editor)
+(require 'helheim-help)
+(with-eval-after-load 'info (require 'helheim-info))
 
-(provide 'twist-core)
-;;; twist-core.el ends here
+(provide 'helheim-core)
+;;; helheim-core.el ends here

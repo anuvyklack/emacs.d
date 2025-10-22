@@ -1,4 +1,4 @@
-;;; twist-emacs-lisp.el -*- lexical-binding: t -*-
+;;; helheim-emacs-lisp.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 (require 'helix-paredit)
@@ -89,5 +89,5 @@
                +elisp-find-definitions-other-window))
   (helix-advice-add cmd :around #'helix-jump-command-a))
 
-(provide 'twist-emacs-lisp)
-;;; twist-emacs-lisp.el ends here
+(provide 'helheim-emacs-lisp)
+;;; helheim-emacs-lisp.el ends here

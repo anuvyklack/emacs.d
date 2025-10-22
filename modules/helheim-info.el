@@ -1,4 +1,4 @@
-;;; twist-info.el -*- lexical-binding: t; -*-
+;;; helheim-info.el -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
 (require 'helix-core)
@@ -34,5 +34,5 @@
 (helix-advice-add 'Info-next-reference :before #'helix-deactivate-mark-a)
 (helix-advice-add 'Info-prev-reference :before #'helix-deactivate-mark-a)
 
-(provide 'twist-info)
-;;; twist-info.el ends here
+(provide 'helheim-info)
+;;; helheim-info.el ends here

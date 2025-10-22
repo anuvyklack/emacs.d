@@ -36,9 +36,9 @@
   (setq-default gc-cons-threshold most-positive-fixnum))
 
 ;; Enable garbage collection after start up.
-(add-hook 'emacs-startup-hook 'twist--restore-original-gc-values 105)
+(add-hook 'emacs-startup-hook 'helheim--restore-original-gc-values 105)
 
-(defun twist--restore-original-gc-values ()
+(defun helheim--restore-original-gc-values ()
   "Reset `gc-cons-threshold' without user's config."
   (when (= (default-value 'gc-cons-threshold)
            most-positive-fixnum)
@@ -195,7 +195,7 @@
 
 ;;; UI elements
 
-(defvar twist-emacs-ui-elements '()
+(defvar helheim-emacs-ui-elements '()
   "List of user interface features to enable in minimal Emacs setup.
 This variable holds a list of Emacs UI features that can be enabled:
 - context-menu (Enables the context menu in graphical environments.)
@@ -204,8 +204,8 @@ This variable holds a list of Emacs UI features that can be enabled:
 - dialogs (Enables both file dialogs and dialog boxes.)
 - tooltips (Enables tooltips.)")
 
-;; (setq frame-title-format twist-emacs-frame-title-format
-;;       icon-title-format  twist-emacs-frame-title-format)
+;; (setq frame-title-format helheim-emacs-frame-title-format
+;;       icon-title-format  helheim-emacs-frame-title-format)
 
 ;; Disable startup screens and messages
 (setq inhibit-splash-screen t)
@@ -215,7 +215,7 @@ This variable holds a list of Emacs UI features that can be enabled:
 ;; a superfluous and potentially expensive frame redraw at startup, depending
 ;; on the window system. The variables must also be set to `nil' so users don't
 ;; have to call the functions twice to re-enable them.
-(unless (memq 'menu-bar twist-emacs-ui-elements)
+(unless (memq 'menu-bar helheim-emacs-ui-elements)
   (push '(menu-bar-lines . 0) default-frame-alist)
   (unless (memq window-system '(mac ns))
     (setq menu-bar-mode nil)))
@@ -225,16 +225,16 @@ This variable holds a list of Emacs UI features that can be enabled:
     ;; Temporarily override the `tool-bar-setup' function to prevent it from
     ;; running during the initial stages of startup.
     (advice-add 'tool-bar-setup :override #'ignore)
-    (advice-add 'startup--load-user-init-file :after 'twist--setup-toolbar)))
+    (advice-add 'startup--load-user-init-file :after 'helheim--setup-toolbar)))
 
-(defun twist--setup-toolbar (&rest _)
+(defun helheim--setup-toolbar (&rest _)
   "Setup the toolbar."
   (when (fboundp 'tool-bar-setup)
     (advice-remove 'tool-bar-setup #'ignore)
     (when (bound-and-true-p tool-bar-mode)
       (funcall 'tool-bar-setup))))
 
-(unless (memq 'tool-bar twist-emacs-ui-elements)
+(unless (memq 'tool-bar helheim-emacs-ui-elements)
   (push '(tool-bar-lines . 0) default-frame-alist)
   (setq tool-bar-mode nil))
 
@@ -243,13 +243,13 @@ This variable holds a list of Emacs UI features that can be enabled:
 (push '(horizontal-scroll-bars) default-frame-alist)
 (setq scroll-bar-mode nil)
 
-(unless (memq 'tooltips twist-emacs-ui-elements)
+(unless (memq 'tooltips helheim-emacs-ui-elements)
   (when (bound-and-true-p tooltip-mode)
     (tooltip-mode -1)))
 
 ;; Disable GUIs because they are inconsistent across systems, desktop
 ;; environments, and themes, and they don't match the look of Emacs.
-(unless (memq 'dialogs twist-emacs-ui-elements)
+(unless (memq 'dialogs helheim-emacs-ui-elements)
   (setq use-file-dialog nil))
 (setq use-dialog-box (eq system-type 'android)) ; Android dialogs are better UX
 
@@ -286,26 +286,26 @@ This variable holds a list of Emacs UI features that can be enabled:
 
 (setq load-prefer-newer t)
 
-(defvar twist-root-directory (file-name-directory load-file-name)
+(defvar helheim-root-directory (file-name-directory load-file-name)
   "The root directory of Emacs Twist core files.
 Must end with a directory separator.")
 
-(setq user-emacs-directory   (expand-file-name "var/" twist-root-directory)
+(setq user-emacs-directory   (expand-file-name "var/" helheim-root-directory)
       package-user-dir       (expand-file-name "elpa/" user-emacs-directory)
       custom-theme-directory (expand-file-name "themes/" user-emacs-directory)
       custom-file            (expand-file-name "custom.el" user-emacs-directory))
 
-(add-to-list 'load-path (expand-file-name "core"    twist-root-directory))
-(add-to-list 'load-path (expand-file-name "modules" twist-root-directory))
+(add-to-list 'load-path (expand-file-name "core"    helheim-root-directory))
+(add-to-list 'load-path (expand-file-name "modules" helheim-root-directory))
 
 ;; Load "custom.el" file.
 (add-hook 'elpaca-after-init-hook (lambda ()
                                     (when (file-exists-p custom-file)
                                       (load-file custom-file))))
 
-(defun twist-load-file (file)
+(defun helheim-load-file (file)
   "Load FILE by path relative to Emacs Twist root directory."
-  (let ((file (expand-file-name file twist-root-directory)))
+  (let ((file (expand-file-name file helheim-root-directory)))
     (when (file-exists-p file)
       (load-file file))))
 

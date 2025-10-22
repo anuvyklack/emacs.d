@@ -1,4 +1,4 @@
-;;; twist-help.el -*- lexical-binding: t; -*-
+;;; helheim-help.el -*- lexical-binding: t; -*-
 ;;; Commentary:
 ;;; Code:
 (require 'helix-core)
@@ -8,7 +8,7 @@
 
 (use-package help
   :hook
-  (help-mode-hook . twist-disable-hl-line-mode)
+  (help-mode-hook . helheim-disable-hl-line-mode)
   :custom
   (help-enable-autoload nil)
   (help-enable-completion-autoload nil)
@@ -24,7 +24,7 @@
   :defer t
   :hook
   ;; (helpful-mode-hook . outline-minor-mode)
-  (helpful-mode-hook . twist-disable-hl-line-mode)
+  (helpful-mode-hook . helheim-disable-hl-line-mode)
   :bind (([remap describe-function] . helpful-callable)
          ([remap describe-variable] . helpful-variable)
          ([remap describe-command] . helpful-command)
@@ -62,5 +62,5 @@
               "f" 'which-key-show-full-keymap
               "k" 'which-key-show-keymap)))
 
-(provide 'twist-help)
-;;; twist-help.el ends here
+(provide 'helheim-help)
+;;; helheim-help.el ends here

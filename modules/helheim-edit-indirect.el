@@ -1,4 +1,4 @@
-;;; twist-edit-indirect.el -*- lexical-binding: t; -*-
+;;; helheim-edit-indirect.el -*- lexical-binding: t; -*-
 ;;
 ;; Copyright © 2025 Yuriy Artemyev
 ;;
@@ -9,7 +9,7 @@
 ;;
 ;;; Commentary:
 ;;
-;; This module rebinds `zn' key chord to `twist-edit-indirect' command.
+;; This module rebinds `zn' key chord to `helheim-edit-indirect' command.
 ;;
 ;; It differs from `helix-narrow-to-region-indirectly' (original `zn' binding)
 ;; which clones buffer inidrectly with narrowing in that the text properties
@@ -38,7 +38,7 @@
 ;;; Keybindings
 
 (helix-keymap-global-set :state 'normal
-  "z n" 'twist-edit-region-indirect) ; replace `helix-narrow-to-region-indirectly'
+  "z n" 'helheim-edit-region-indirect) ; replace `helix-narrow-to-region-indirectly'
 
 (with-eval-after-load 'edit-indirect
   (helix-keymap-set edit-indirect-mode-map :state 'normal
@@ -48,7 +48,7 @@
 ;;; Command
 
 ;;;###autoload
-(defun twist-edit-region-indirect (arg)
+(defun helheim-edit-region-indirect (arg)
   "Copy region without text properties, to a separate buffer.
 With \\[universal-argument] ask which major mode to use in edit-indirect buffer.
 
@@ -94,20 +94,20 @@ already an edit-indirect buffer active overlapping any portion of region, an
         (beginning-of-buffer)
         (switch-to-buffer buffer)))))
 
-(add-hook 'edit-indirect-after-creation-hook #'twist-edit-indirect--dedent)
-(add-hook 'edit-indirect-before-commit-hook  #'twist-edit-indirect--indent)
+(add-hook 'edit-indirect-after-creation-hook #'helheim-edit-indirect--dedent)
+(add-hook 'edit-indirect-before-commit-hook  #'helheim-edit-indirect--indent)
 
-(defun twist-edit-indirect--dedent ()
-  (setq-local twist-edit-indirect--intentation (+common-indentation))
+(defun helheim-edit-indirect--dedent ()
+  (setq-local helheim-edit-indirect--intentation (+common-indentation))
   (save-excursion
     (indent-rigidly (point-min) (point-max)
-                    (- twist-edit-indirect--intentation))))
+                    (- helheim-edit-indirect--intentation))))
 
-(defun twist-edit-indirect--indent ()
-  (when (boundp 'twist-edit-indirect--intentation)
+(defun helheim-edit-indirect--indent ()
+  (when (boundp 'helheim-edit-indirect--intentation)
     (save-excursion
       (indent-rigidly (point-min) (point-max)
-                      twist-edit-indirect--intentation))))
+                      helheim-edit-indirect--intentation))))
 
 (defun +common-indentation ()
   "Return the common indentation off all lines in the buffer."
@@ -120,5 +120,5 @@ already an edit-indirect buffer active overlapping any portion of region, an
         (forward-line))
       indentation)))
 
-(provide 'twist-edit-indirect)
-;;; twist-edit-indirect.el ends here
+(provide 'helheim-edit-indirect)
+;;; helheim-edit-indirect.el ends here

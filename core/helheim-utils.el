@@ -1,6 +1,6 @@
-;;; twist-utils.el -*- lexical-binding: t; -*-
+;;; helheim-utils.el -*- lexical-binding: t; -*-
 ;;; Code:
-(require 's)
+;; (require 's)
 (require 'dash)
 
 (defmacro +theme-set-faces (theme &rest specs)
@@ -33,5 +33,5 @@ HOOK should be a symbol."
     ;; else
     (ensure-list (symbol-value hook))))
 
-(provide 'twist-utils)
-;;; twist-utils.el ends here
+(provide 'helheim-utils)
+;;; helheim-utils.el ends here

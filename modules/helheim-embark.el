@@ -1,4 +1,4 @@
-;;; twist-embark.el -*- lexical-binding: t -*-
+;;; helheim-embark.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 (require 'helix-core)
@@ -178,5 +178,5 @@ the first target at point."
   (embark-select)
   (next-line))
 
-(provide 'twist-embark)
-;;; twist-embark.el ends here
+(provide 'helheim-embark)
+;;; helheim-embark.el ends here

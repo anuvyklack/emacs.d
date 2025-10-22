@@ -1,4 +1,4 @@
-;;; twist-consult.el -*- lexical-binding: t -*-
+;;; helheim-consult.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 (require 'helix-core)
@@ -104,5 +104,5 @@
   "<remap> <yank-pop>"                      'consult-yank-pop
   "<remap> <locate>"                        'consult-locate)
 
-(provide 'twist-consult)
-;;; twist-consult.el ends here
+(provide 'helheim-consult)
+;;; helheim-consult.el ends here

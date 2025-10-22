@@ -1,5 +1,5 @@
 ;;; -*- lexical-binding: t; no-byte-compile: t; -*-
-;; (require 'twist-utils)
+;; (require 'helheim-utils)
 
 ;; (add-hook 'enable-theme-functions
 ;;           (lambda (theme)

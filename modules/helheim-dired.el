@@ -1,4 +1,4 @@
-;;; twist-dired.el -*- lexical-binding: t -*-
+;;; helheim-dired.el -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 
@@ -108,5 +108,5 @@
     (dired-filter-group-mode -1)
     (remove-hook 'dired-mode-hook #'dired-filter-group-mode)))
 
-(provide 'twist-dired)
-;;; twist-dired.el ends here
+(provide 'helheim-dired)
+;;; helheim-dired.el ends here
