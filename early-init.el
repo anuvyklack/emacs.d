@@ -87,7 +87,6 @@
 (setq ad-redefinition-action 'accept)
 
 ;;; Performance
-;;;; Performance: Miscellaneous options
 
 ;; Font compacting can be very resource-intensive, especially when rendering
 ;; icon fonts on Windows. This will increase memory usage.
@@ -134,64 +133,6 @@
       (setq command-line-ns-option-alist nil))
     (unless (memq initial-window-system '(x pgtk))
       (setq command-line-x-option-alist nil))))
-
-;;;; Performance: Inhibit redisplay
-
-(unless (or (daemonp)
-            noninteractive
-            debug-on-error)
-  ;; Suppress redisplay and redraw during startup to avoid delays and
-  ;; prevent flashing an unstyled Emacs frame.
-  (setq-default inhibit-redisplay t)
-  (add-hook 'post-command-hook 'twist--reset-inhibit-redisplay -100))
-
-(defun twist--reset-inhibit-redisplay ()
-  "Reset inhibit redisplay."
-  (setq-default inhibit-redisplay nil)
-  (remove-hook 'post-command-hook 'twist--reset-inhibit-redisplay))
-
-;;;; Performance: Inhibit message
-
-;; Suppress startup messages for a cleaner experience. The tradeoff is that you
-;; won't be informed of the progress or any relevant activities during startup.
-(unless (or (daemonp)
-            noninteractive
-            debug-on-error)
-  (setq-default inhibit-message t)
-  (add-hook 'post-command-hook 'twist--reset-inhibit-message -100))
-
-(defun twist--reset-inhibit-message ()
-  "Reset inhibit message."
-  (setq-default inhibit-message nil)
-  (remove-hook 'post-command-hook 'twist--reset-inhibit-message))
-
-;;;; Performance: Disable mode-line during startup
-
-;; Disable the mode line during startup to reduces visual clutter.
-(unless (or init-file-debug (daemonp) noninteractive)
-  (put 'mode-line-format
-       'initial-value (default-toplevel-value 'mode-line-format))
-  (setq-default mode-line-format nil)
-  (dolist (buf (buffer-list))
-    (with-current-buffer buf
-      (setq mode-line-format nil))))
-
-;;;; Restore values
-
-(advice-add 'startup--load-user-init-file :around 'twist--startup-load-user-init-file)
-
-(defun twist--startup-load-user-init-file (fn &rest args)
-  "Advice to reset `mode-line-format'. FN and ARGS are the function and args."
-  (unwind-protect
-      ;; Start up as normal
-      (apply fn args)
-    ;; If we don't undo inhibit-{message, redisplay} and there's an error, we'll
-    ;; see nothing but a blank Emacs frame.
-    (setq-default inhibit-message nil
-                  inhibit-redisplay nil)
-    ;; Restore the mode-line
-    (unless (default-toplevel-value 'mode-line-format)
-      (setq-default mode-line-format (get 'mode-line-format 'initial-value)))))
 
 ;;; UI elements
 

@@ -360,6 +360,8 @@ the unwritable tidbits."
 ;; revert, and you need to move once more — very annoying.
 (global-hl-line-mode)
 
+(setq global-hl-line-sticky-flag t)
+
 (defun helheim-disable-hl-line-mode ()
   "Disable `global-hl-line-mode' in current buffer."
   (setq-local global-hl-line-mode nil)

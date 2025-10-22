@@ -45,6 +45,7 @@
   (helix-keymap-set deadgrep-edit-mode-map :state 'normal
     "<escape>" 'deadgrep-mode
     "Z Z" 'deadgrep-mode
+    "RET" 'deadgrep-visit-result-other-window
 
     ;; Commands bound to these keys have no sense for Deadgrep.
     "o"   'undefined

@@ -10,7 +10,7 @@
 ;;; Code:
 ;;; Fonts
 
-(set-face-font 'default (font-spec :family "PragmataPro Mono Liga" :size 13.9))
+(set-face-font 'default     (font-spec :family "PragmataPro Mono Liga" :size 13.9))
 (set-face-font 'fixed-pitch (font-spec :family "PragmataPro Mono Liga" :size 13.9))
 (setq use-default-font-for-symbols t)
 
@@ -77,5 +77,39 @@
 ;; (require 'helheim-outline)
 (require 'helheim-deadgrep)
 ;; (require 'helheim-edit-indirect)
+
+;;; Config
+;;;; Appearance
+;;;;; Colorize strings that represent colors
+
+(use-package rainbow-mode
+  :ensure t
+  :blackout t
+  :hook (emacs-lisp-mode conf-space-mode conf-toml-mode fish-mode toml-ts-mode))
+
+;;;; Keybindings
+
+(use-package helix-leader
+  :custom
+  (helix-leader-send-C-x-with-control-modifier nil))
+
+(helix-keymap-global-set :state '(normal motion)
+  "<backspace>" 'execute-extended-command)
+
+(helix-keymap-global-set
+  "M-;"   'eval-expression
+  "C-M-;" 'repeat-complex-command)
+
+(helix-keymap-global-set :state 'normal
+  "M-;"   nil ;; helix-exchange-point-and-mark
+  "C-;"   'helix-exchange-point-and-mark)
+
+;; "C-w"
+(helix-keymap-set helix-window-map
+  "N" 'other-tab-prefix)
+
+(helix-keymap-global-set :state 'insert
+  "C-w" 'backward-kill-word ;; along with "C-backspace"
+  "C-/" 'dabbrev-expand)
 
 ;;; init.el ends here
