@@ -73,9 +73,10 @@
 (require 'helheim-embark)
 (require 'helheim-xref)
 
-;; (require 'helheim-dired)
-;; (require 'helheim-outline)
 (require 'helheim-deadgrep)
+;; (require 'helheim-dired)
+(require 'helheim-outline)
+(require 'helheim-tab-bar)
 ;; (require 'helheim-edit-indirect)
 
 ;;; Config
@@ -85,7 +86,33 @@
 (use-package rainbow-mode
   :ensure t
   :blackout t
-  :hook (emacs-lisp-mode conf-space-mode conf-toml-mode fish-mode toml-ts-mode))
+  :hook (emacs-lisp-mode-hook
+         conf-mode-hook
+         fish-mode-hook
+         toml-ts-mode-hook))
+
+;;;;; DISABLED show time in tab bar
+
+;; (use-package time
+;;   :custom
+;;   (display-time-24hr-format t)
+;;   (display-time-use-mail-icon t)
+;;   :hook (elpaca-after-init-hook . display-time-mode))
+
+;;;; repeat-mode
+
+;; Evaluate `describe-repeat-maps' to see all repeatable commands.
+(use-package repeat
+  :hook (elpaca-after-init-hook . repeat-mode)
+  :custom
+  (repeat-exit-key "<escape>")
+  (repeat-exit-timeout 2)
+  (repeat-check-key nil)
+  ;; :config
+  ;; ;; Disable repeating for following commands
+  ;; (put 'tab-next     'repeat-map nil)
+  ;; (put 'tab-previous 'repeat-map nil)
+  )
 
 ;;;; Keybindings
 

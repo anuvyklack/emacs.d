@@ -3,7 +3,183 @@
 ;;; Code:
 (require 'dash)
 
-;;; Editor
+;;; UI
+;;;; Misc
+
+;; Show current key-sequence in minibuffer ala 'set showcmd' in vim.
+;; Any feedback after typing is better UX than no feedback at all.
+(setq echo-keystrokes 0.02)
+
+;; Accept shorter responses: "y" for yes and "n" for no.
+(setq use-short-answers t
+      read-answer-short 'auto)
+
+(setq prettify-symbols-unprettify-at-point 'right-edge)
+
+;; Position underlines at the descent line instead of the baseline.
+(setq x-underline-at-descent-line t)
+
+(setq truncate-string-ellipsis "…")
+
+;; No beeping or blinking
+(setq visible-bell nil
+      ring-bell-function #'ignore)
+
+;; Disable truncation of printed s-expressions in the message buffer.
+(setq eval-expression-print-length nil
+      eval-expression-print-level nil)
+
+;;;; Mouse
+
+;; middle-click paste at point, not at click
+(setq mouse-yank-at-point t)
+
+;; Context menu on right mouse button click.
+(when (and (display-graphic-p)
+           (memq 'context-menu helheim-emacs-ui-elements))
+  (add-hook 'after-init-hook #'context-menu-mode))
+
+;;;; Cursor
+
+;; I anable blinking cursor, but it may interferes with cursor settings in some
+;; minor modes that try to change it buffer-locally (e.g., Treemacs).
+(blink-cursor-mode)
+
+;; Do not extend the cursor to fit wide characters.
+(setq x-stretch-cursor nil)
+
+;;;; Current line highlight
+
+;; I want current line highlighting in special modes and don't want in text
+;; editing modes because it interferes with Helix selections. However I use
+;; `global-hl-line-mode' because the local `hl-line-mode' works unreliably: the
+;; highlighting is missing in Ibuffer when you switch to it, and you have to
+;; move the cursor to make it appear. Then it disappears again after auto
+;; revert, and you need to move once more — very annoying.
+(global-hl-line-mode)
+
+(setq global-hl-line-sticky-flag t)
+
+(defun helheim-disable-hl-line-mode ()
+  "Disable `global-hl-line-mode' in current buffer."
+  (setq-local global-hl-line-mode nil)
+  (global-hl-line-unhighlight))
+
+(add-hook 'text-mode-hook #'helheim-disable-hl-line-mode)
+(add-hook 'prog-mode-hook #'helheim-disable-hl-line-mode)
+(add-hook 'conf-mode-hook #'helheim-disable-hl-line-mode)
+
+;;;; Line numbers
+
+(use-package display-line-numbers
+  :hook prog-mode-hook text-mode-hook conf-mode-hook
+  :custom
+  (display-line-numbers-width 3)
+  (display-line-numbers-type t)
+  (display-line-numbers-width-start t)
+  (display-line-numbers-grow-only t)
+  ;; Show absolute line numbers for narrowed regions to make it easier to tell
+  ;; the buffer is narrowed, and where you are, exactly.
+  (display-line-numbers-widen t))
+
+;;;; Fringes
+
+;; Disable visual indicators in the fringe for buffer boundaries and empty lines.
+(setq indicate-buffer-boundaries nil
+      indicate-empty-lines nil)
+
+(setq-default left-fringe-width  8
+              right-fringe-width 8)
+
+;;;; Modeline
+
+;; Show (line,column) indicator in modeline.
+(add-hook 'after-init-hook #'line-number-mode)
+(add-hook 'after-init-hook #'column-number-mode)
+
+;;;; Windows
+
+;; Reduce rendering/line scan work by not rendering cursors or regions in
+;; non-focused windows.
+(setq-default cursor-in-non-selected-windows t)
+(setq highlight-nonselected-windows t)
+
+(setq window-resize-pixelwise t)
+
+;; FIX: The native border "consumes" a pixel of the fringe on righter-most
+;;   splits, `window-divider' does not.
+(setq window-divider-default-places t
+      window-divider-default-bottom-width 1
+      window-divider-default-right-width 1)
+(add-hook 'after-init-hook #'window-divider-mode)
+
+;; Prefer vertical splits over horizontal ones.
+(setq split-width-threshold 170
+      split-height-threshold nil)
+
+;;;; Scrolling
+
+;; ;; Move point to top/bottom of buffer before signaling a scrolling error.
+;; (setq scroll-error-top-bottom t)
+
+;; Enables faster scrolling. This may result in brief periods of inaccurate
+;; syntax highlighting, which should quickly self-correct.
+(setq fast-but-imprecise-scrolling t)
+
+;; Keep screen position if scroll command moved it vertically out of the window.
+(setq scroll-preserve-screen-position t)
+
+;; 1. Preventing automatic adjustments to `window-vscroll' for long lines.
+;; 2. Resolving the issue of random half-screen jumps during scrolling.
+(setq auto-window-vscroll nil)
+
+;; Number of lines of margin at the top and bottom of a window.
+(setq scroll-margin 0)
+
+;; Number of lines of continuity when scrolling by screenfuls.
+(setq next-screen-context-lines 0)
+
+;; Horizontal scrolling
+(setq hscroll-margin 2
+      hscroll-step 1)
+
+;; Disable auto-adding a new line at the bottom when scrolling.
+(setq next-line-add-newlines nil)
+
+;; Why is `jit-lock-stealth-time' nil by default?
+;; https://lists.gnu.org/archive/html/help-gnu-emacs/2022-02/msg00352.html
+(setq jit-lock-stealth-time 1.25 ; Calculate fonts when idle for 1.25 seconds
+      jit-lock-stealth-nice 0.5  ; Seconds between font locking
+      jit-lock-chunk-size 4096)
+
+;; Avoid fontification while typing
+(setq jit-lock-defer-time 0)
+(add-hook 'helix-insert-state-enter-hook (lambda () (setq jit-lock-defer-time 0.25)))
+(add-hook 'helix-insert-state-exit-hook  (lambda () (setq jit-lock-defer-time 0)))
+
+;;;;; Smooth scrolling
+
+(use-package pixel-scroll
+  :custom
+  ;; The duration of smooth scrolling.
+  (pixel-scroll-precision-interpolation-total-time 0.3)
+  (pixel-scroll-precision-large-scroll-height 20.0)
+  ;; Enable smooth scrolling with PageDown and PageUp keys
+  (pixel-scroll-precision-interpolate-page t)
+  :bind
+  ([remap scroll-up-command] . pixel-scroll-interpolate-down)
+  ([remap scroll-down-command] . pixel-scroll-interpolate-up))
+
+;;;;; Scrolling with mouse wheel and touchpad
+
+(use-package ultra-scroll
+  :ensure (ultra-scroll :host github :repo "jdtsmith/ultra-scroll")
+  :hook (elpaca-after-init-hook . ultra-scroll-mode)
+  :custom
+  (mouse-wheel-tilt-scroll t) ; Scroll horizontally with mouse side wheel.
+  (mouse-wheel-progressive-speed nil))
+
+;;; Emacs features
 
 ;; This setting forces Emacs to save bookmarks immediately after each change.
 ;; Benefit: you never lose bookmarks if Emacs crashes.
@@ -286,12 +462,16 @@ the unwritable tidbits."
 
 (blackout 'eldoc-mode)
 
+;;;; image-mode
+
+(setq image-animate-loop t)
+
 ;;;; occur-mode
 
 ;; Create separate *Occur* buffer for each search.
 (add-hook 'occur-hook 'occur-rename-buffer)
 
-;;;; VC
+;;;; version control
 
 (setq vc-git-print-log-follow t
       vc-make-backup-files nil ; Do not backup version controlled files.
@@ -309,177 +489,16 @@ the unwritable tidbits."
 (with-eval-after-load 'vc-annotate
   (keymap-set vc-annotate-mode-map "<remap> <quit-window>" #'kill-current-buffer))
 
-;;; UI
-;;;; Misc
+;;;; which-key
 
-;; Accept shorter responses: "y" for yes and "n" for no.
-(setq use-short-answers t
-      read-answer-short 'auto)
-
-(setq prettify-symbols-unprettify-at-point 'right-edge)
-
-;; Position underlines at the descent line instead of the baseline.
-(setq x-underline-at-descent-line t)
-
-(setq truncate-string-ellipsis "…")
-
-;; No beeping or blinking
-(setq visible-bell nil
-      ring-bell-function #'ignore)
-
-;; Disable truncation of printed s-expressions in the message buffer.
-(setq eval-expression-print-length nil
-      eval-expression-print-level nil)
-
-;;;; Mouse
-
-;; middle-click paste at point, not at click
-(setq mouse-yank-at-point t)
-
-;; Context menu on right mouse button click.
-(when (and (display-graphic-p)
-           (memq 'context-menu helheim-emacs-ui-elements))
-  (add-hook 'after-init-hook #'context-menu-mode))
-
-;;;; Cursor
-
-;; I anable blinking cursor, but it may interferes with cursor settings in some
-;; minor modes that try to change it buffer-locally (e.g., Treemacs).
-(blink-cursor-mode)
-
-;; Do not extend the cursor to fit wide characters.
-(setq x-stretch-cursor nil)
-
-;;;; Current line highlight
-
-;; I want current line highlighting in special modes and don't want in text
-;; editing modes because it interferes with Helix selections. However I use
-;; `global-hl-line-mode' because the local `hl-line-mode' works unreliably: the
-;; highlighting is missing in Ibuffer when you switch to it, and you have to
-;; move the cursor to make it appear. Then it disappears again after auto
-;; revert, and you need to move once more — very annoying.
-(global-hl-line-mode)
-
-(setq global-hl-line-sticky-flag t)
-
-(defun helheim-disable-hl-line-mode ()
-  "Disable `global-hl-line-mode' in current buffer."
-  (setq-local global-hl-line-mode nil)
-  (global-hl-line-unhighlight))
-
-(add-hook 'text-mode-hook #'helheim-disable-hl-line-mode)
-(add-hook 'prog-mode-hook #'helheim-disable-hl-line-mode)
-(add-hook 'conf-mode-hook #'helheim-disable-hl-line-mode)
-
-;;;; Line numbers
-
-(use-package display-line-numbers
-  :hook prog-mode-hook text-mode-hook conf-mode-hook
+(use-package which-key
+  :hook (elpaca-after-init-hook . which-key-mode)
   :custom
-  (display-line-numbers-width 3)
-  (display-line-numbers-type t)
-  (display-line-numbers-width-start t)
-  (display-line-numbers-grow-only t)
-  ;; Show absolute line numbers for narrowed regions to make it easier to tell
-  ;; the buffer is narrowed, and where you are, exactly.
-  (display-line-numbers-widen t))
-
-;;;; Fringes
-
-;; Disable visual indicators in the fringe for buffer boundaries and empty lines.
-(setq indicate-buffer-boundaries nil
-      indicate-empty-lines nil)
-
-(setq-default left-fringe-width  8
-              right-fringe-width 8)
-
-;;;; Modeline
-
-;; Show (line,column) indicator in modeline.
-(add-hook 'after-init-hook #'line-number-mode)
-(add-hook 'after-init-hook #'column-number-mode)
-
-;;;; Windows
-
-;; Reduce rendering/line scan work by not rendering cursors or regions in
-;; non-focused windows.
-(setq-default cursor-in-non-selected-windows t)
-(setq highlight-nonselected-windows t)
-
-(setq window-resize-pixelwise t)
-
-;; FIX: The native border "consumes" a pixel of the fringe on righter-most
-;;   splits, `window-divider' does not.
-(setq window-divider-default-places t
-      window-divider-default-bottom-width 1
-      window-divider-default-right-width 1)
-(add-hook 'after-init-hook #'window-divider-mode)
-
-;; Prefer vertical splits over horizontal ones.
-(setq split-width-threshold 170
-      split-height-threshold nil)
-
-;;;; Scrolling
-
-;; ;; Move point to top/bottom of buffer before signaling a scrolling error.
-;; (setq scroll-error-top-bottom t)
-
-;; Enables faster scrolling. This may result in brief periods of inaccurate
-;; syntax highlighting, which should quickly self-correct.
-(setq fast-but-imprecise-scrolling t)
-
-;; Keep screen position if scroll command moved it vertically out of the window.
-(setq scroll-preserve-screen-position t)
-
-;; 1. Preventing automatic adjustments to `window-vscroll' for long lines.
-;; 2. Resolving the issue of random half-screen jumps during scrolling.
-(setq auto-window-vscroll nil)
-
-;; Number of lines of margin at the top and bottom of a window.
-(setq scroll-margin 0)
-
-;; Number of lines of continuity when scrolling by screenfuls.
-(setq next-screen-context-lines 0)
-
-;; Horizontal scrolling
-(setq hscroll-margin 2
-      hscroll-step 1)
-
-;; Disable auto-adding a new line at the bottom when scrolling.
-(setq next-line-add-newlines nil)
-
-;; Why is `jit-lock-stealth-time' nil by default?
-;; https://lists.gnu.org/archive/html/help-gnu-emacs/2022-02/msg00352.html
-(setq jit-lock-stealth-time 1.25 ; Calculate fonts when idle for 1.25 seconds
-      jit-lock-stealth-nice 0.5  ; Seconds between font locking
-      jit-lock-chunk-size 4096)
-
-;; Avoid fontification while typing
-(setq jit-lock-defer-time 0)
-(add-hook 'helix-insert-state-enter-hook (lambda () (setq jit-lock-defer-time 0.25)))
-(add-hook 'helix-insert-state-exit-hook  (lambda () (setq jit-lock-defer-time 0)))
-
-;;;;; Smooth scrolling
-
-(use-package pixel-scroll
-  :custom
-  ;; The duration of smooth scrolling.
-  (pixel-scroll-precision-interpolation-total-time 0.3)
-  (pixel-scroll-precision-large-scroll-height 20.0)
-  ;; Enable smooth scrolling with PageDown and PageUp keys
-  (pixel-scroll-precision-interpolate-page t)
-  :bind
-  ([remap scroll-up-command] . pixel-scroll-interpolate-down)
-  ([remap scroll-down-command] . pixel-scroll-interpolate-up))
-
-;;;;; Scrolling with mouse wheel and touchpad
-
-(use-package ultra-scroll
-  :ensure (ultra-scroll :host github :repo "jdtsmith/ultra-scroll")
-  :hook (elpaca-after-init-hook . ultra-scroll-mode)
-  :custom
-  (mouse-wheel-tilt-scroll t) ; Scroll horizontally with mouse side wheel.
-  (mouse-wheel-progressive-speed nil))
+  (which-key-lighter nil)
+  (which-key-idle-delay 1.5)
+  (which-key-idle-secondary-delay 0.25)
+  (which-key-add-column-padding 1)
+  (which-key-max-description-length 40))
 
 ;;; Text editing
 ;;;; Misc
@@ -545,7 +564,15 @@ the unwritable tidbits."
         ;; show-paren-when-point-in-periphery t
         )
 
+(use-package rainbow-delimiters
+  :ensure t
+  :hook prog-mode-hook conf-mode-hook ; text-mode-hook
+  )
+
 ;;;; Prog-mode
+
+(add-hook 'prog-mode-hook 'helheim-show-trailing-whitespace)
+(add-hook 'prog-mode-hook 'helheim-show-fill-column-indicator)
 
 (defun helheim-show-trailing-whitespace ()
   "Highlight trailing whitespaces with `trailing-whitespace' face.
@@ -558,13 +585,6 @@ Use `delete-trailing-whitespace' command."
   "Display `fill-column' indicator."
   (setq-local display-fill-column-indicator t
               display-fill-column-indicator-character ?\u2502))
-
-(add-hook 'prog-mode-hook 'helheim-show-trailing-whitespace)
-(add-hook 'prog-mode-hook 'helheim-show-fill-column-indicator)
-
-(use-package rainbow-delimiters
-  :ensure t
-  :hook prog-mode conf-mode)
 
 ;;;; Extra file extensions to support
 

@@ -2,11 +2,11 @@
 ;;; Commentary:
 ;;; Code:
 
-;; -l               -- use a long listing format
-;; -a, --all        -- do not ignore entries starting with `.'
-;; -A, --almost-all -- do not list implied `.' and `..'
-;; -F, --classify   -- append indicator (one of /=>@|) to entries
-;; -v               -- natural sort of (version) numbers within text
+;; -l               :: use a long listing format
+;; -a, --all        :: do not ignore entries starting with "."
+;; -A, --almost-all :: do not list implied "." and ".."
+;; -F, --classify   :: append indicator (one of /=>@|) to entries
+;; -v               :: natural sort of (version) numbers within text
 (setq dired-listing-switches "-lAhF -v --group-directories-first")
 ;; (setq dired-free-space nil)
 
@@ -14,7 +14,7 @@
       dired-dwim-target t  ; Propose a target for intelligent moving/copying
       delete-by-moving-to-trash t
       dired-deletion-confirmer 'y-or-n-p
-      dired-recursive-deletes 'top
+      dired-recursive-deletes 'top ;; 'always
       dired-recursive-copies 'always
       dired-vc-rename-file t
       dired-create-destination-dirs 'ask
@@ -23,6 +23,8 @@
       dired-no-confirm t
       dired-clean-confirm-killing-deleted-buffers nil
       dired-maybe-use-globstar t)
+
+(add-hook 'dired-mode-hook #'dired-hide-details-mode)
 
 ;; dired-omit-mode
 (setq dired-omit-verbose nil

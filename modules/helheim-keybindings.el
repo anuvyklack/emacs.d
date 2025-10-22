@@ -1,5 +1,10 @@
-;;; helheim-keybindings.el -*- lexical-binding: t -*-
+;;; helheim-keybindings.el -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;; Commentary:
+;;
+;; The idea of this file is to store all keybindings in one place. It relies on
+;; `featurep' and enables keybindings conditionally, so you should `require' it
+;; last.
+;;
 ;;; Code:
 (elpaca imenu-list)
 
@@ -10,7 +15,13 @@
   "z SPC" 'cycle-spacing
   "z ."   'set-fill-prefix)
 
-;; <leader>
+(helix-keymap-global-set
+  "C-x C-b" 'ibuffer-jump ; override `list-buffers'
+  "C-x C-r" 'recentf-open ; override `find-file-read-only'
+  "C-x C-d" 'dired-jump)  ; override `list-directory'
+
+;;; <leader>
+
 (helix-keymap-set mode-specific-map
   "RET" 'bookmark-jump
   "," 'switch-to-buffer
@@ -19,7 +30,7 @@
   "b" (cons "buffer"
             (define-keymap
               "b" 'ibuffer-jump        ; "<leader> bb"
-              "n" 'switch-to-buffer    ; next after "b"
+              "n" 'switch-to-buffer    ; next key after "b"
               "s" 'save-buffer
               "w" 'write-file
               "d" 'kill-current-buffer ; also "C-w d"
@@ -52,10 +63,19 @@
 (helix-keymap-set search-map
   "i" 'imenu)
 
-(helix-keymap-global-set
-  "C-x C-b" 'ibuffer-jump ; override `list-buffers'
-  "C-x C-r" 'recentf-open ; override `find-file-read-only'
-  "C-x C-d" 'dired-jump)  ; override `list-directory'
+;;; Man
+
+(with-eval-after-load 'man
+  ;; You can also enable `outline-minor-mode' in a Man buffer, so the keys
+  ;; should possibly not interfere with it.
+  (helix-keymap-set Man-mode-map :state 'normal
+    "z h"   'Man-next-manpage     ; left
+    "z l"   'Man-previous-manpage ; right
+    "z j"   'Man-next-section     ; up
+    "z k"   'Man-previous-section ; down
+    "z /"   'Man-goto-section     ; Relative to sections thats why on "z" layer.
+    "g r"   'Man-follow-manual-reference ; go to reference
+    "C-w r" 'Man-update-manpage)) ; Standard chord for revert.
 
 (provide 'helheim-keybindings)
 ;;; helheim-keybindings.el ends here
